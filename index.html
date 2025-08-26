@@ -3,21 +3,40 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Conference Buddy — Session Recorder (Mobile, CORS-safe)</title>
+<title>Conference Buddy — Session Recorder (Mobile + Deep Logs)</title>
 <style>
-  :root{--bg:#0a1020;--bg2:#0f1a33;--fg:#e6eefc;--muted:#9bb3e0;--accent:#3b82f6;--accent2:#60a5fa;--danger:#ef4444;--ok:#10b981;--card:#0c1428;--border:#1f2a44}
-  *{box-sizing:border-box} html,body{height:100%} body{margin:0;background:linear-gradient(180deg,var(--bg),#071028);color:var(--fg);
-   font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+  :root{
+    --bg:#0a1020; --bg2:#0f1a33; --fg:#e6eefc; --muted:#9bb3e0;
+    --accent:#3b82f6; --accent2:#60a5fa; --danger:#ef4444; --ok:#10b981;
+    --card:#0c1428; --border:#1f2a44;
+    --dialog-bg:#ffffff; --dialog-fg:#0b1220; --dialog-border:#d9e2f3;
+    --selection:#1f2a44;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:linear-gradient(180deg,var(--bg),#071028);
+    color:var(--fg);
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial
+  }
+  ::selection{background:var(--selection);color:#fff}
   a{color:var(--accent)}
   .wrap{max-width:720px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:12px}
-  header{position:sticky;top:0;z-index:40;background:linear-gradient(180deg,rgba(10,16,32,.95),rgba(10,16,32,.75));backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+  header{
+    position:sticky;top:0;z-index:40;
+    background:linear-gradient(180deg,rgba(10,16,32,.95),rgba(10,16,32,.75));
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border)
+  }
   .hbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 6px}
   .brand{display:flex;gap:8px;align-items:center}
   .badge,.chip{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:4px 8px}
   .badge{background:#0b1a3a;color:#c5d7ff}.chip{color:#b9caf2}
   button,input,select,textarea{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);outline:none}
-  button{cursor:pointer} button.primary{background:linear-gradient(180deg,var(--accent),var(--accent2));border:none;color:#fff;font-weight:700}
-  button.ghost{background:transparent;border:1px solid var(--border)} button.danger{background:var(--danger);border:none;color:#fff}
+  button{cursor:pointer}
+  button.primary{background:linear-gradient(180deg,var(--accent),var(--accent2));border:none;color:#fff;font-weight:700}
+  button.ghost{background:transparent;border:1px solid var(--border)}
+  button.danger{background:var(--danger);border:none;color:#fff}
   button:disabled{opacity:.6;cursor:not-allowed}
   .section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px}
   .section h2{margin:.2rem 0 8px;font-size:16px;color:#d7e5ff}
@@ -28,11 +47,30 @@
   .status{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;background:#0b152c;border:1px solid var(--border);border-radius:12px;padding:10px;max-height:40vh;overflow:auto}
   .muted{color:var(--muted)}
   .thumb{width:88px;height:88px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
-  .thumbwrap{position:relative}.removebtn{position:absolute;top:4px;right:4px;background:#0008;border:1px solid var(--border);color:#fff;border-radius:999px;padding:2px 6px;font-size:12px}
+  .thumbwrap{position:relative}
+  .removebtn{position:absolute;top:4px;right:4px;background:#0008;border:1px solid var(--border);color:#fff;border-radius:999px;padding:2px 6px;font-size:12px}
   .preview{display:flex;gap:8px;flex-wrap:wrap}
   .sticky-controls{position:sticky;top:54px;z-index:35}
   #notes{min-height:240px}
   @media(min-width:900px){.wrap{max-width:1100px} #notes{min-height:280px}}
+
+  /* Dialogs: white, readable */
+  dialog{border:none;border-radius:18px;padding:0;background:transparent;color:inherit}
+  .dialog-card{
+    background:var(--dialog-bg); color:var(--dialog-fg);
+    border:1px solid var(--dialog-border);
+    border-radius:18px; padding:14px; min-width:60vw; max-width:900px; max-height:80vh; overflow:auto;
+    box-shadow:0 18px 50px rgba(0,0,0,.55)
+  }
+  .dialog-card h2{color:#0b1220}
+  .dialog-card .muted{color:#485e8b}
+  .dialog-toolbar{display:flex;gap:8px;justify-content:flex-end}
+  .dialog-card input,.dialog-card select,.dialog-card textarea,.dialog-card button{
+    background:#f2f6ff;border-color:#cfd8ee;color:#0b1220
+  }
+  .dialog-card button.primary{background:linear-gradient(180deg,#2563eb,#60a5fa);color:#fff;border:none}
+  .dialog-card button.ghost{background:#fff;border:1px solid #cfd8ee;color:#0b1220}
+  .dialog-status{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;background:#eef3ff;border:1px solid #cfd8ee;border-radius:12px;padding:10px}
 </style>
 </head>
 <body>
@@ -42,13 +80,14 @@
     <div class="row">
       <span id="apiStatus" class="chip">Disconnected</span>
       <button id="btnLogs" class="ghost" title="View & export logs">Logs</button>
+      <button id="btnSelfTest" class="ghost" title="Run API self-test">Self-Test</button>
       <button id="btnOpenAuth" class="ghost">API</button>
     </div>
   </div>
 </header>
 
 <main class="wrap">
-  <!-- Recorder (top) -->
+  <!-- Recorder -->
   <section class="section">
     <h2>Session Recorder</h2>
     <div class="sticky-controls">
@@ -97,7 +136,7 @@
     </div>
   </section>
 
-  <!-- Previous (bottom/scroll) -->
+  <!-- Previous -->
   <section class="section">
     <h2>Previous Sessions</h2>
     <div class="grid2">
@@ -117,90 +156,111 @@
   </section>
 </main>
 
-<!-- API Settings -->
-<dialog id="authDialog">
-  <div class="section">
-    <h2>API Settings</h2>
-    <label>Backend API Base URL</label>
-    <input id="apiUrl" placeholder="https://conference-buddy-geoutils.replit.app" />
-    <div class="grid2">
-      <div>
-        <label>API Key</label>
-        <input id="apiKey" type="password" placeholder="paste API key…" />
-      </div>
-      <div>
-        <label>Auth Mode</label>
-        <select id="authMode">
-          <option value="auto">Auto (Header → Query fallback)</option>
-          <option value="xapikey">Header: X-API-Key</option>
-          <option value="bearer">Header: Authorization: Bearer</option>
-          <option value="query">Query param (?apiKey=...)</option>
-        </select>
-      </div>
-    </div>
-    <div>
-      <label>Query parameter name (when using Query mode)</label>
-      <input id="authParam" placeholder="apiKey" />
-    </div>
-    <div class="row" style="margin-top:8px">
-      <button id="btnTest" class="ghost">Test Connection</button>
+<!-- API / Settings -->
+<dialog id="authDialog"><div class="dialog-card">
+  <div class="row" style="justify-content:space-between;align-items:center">
+    <h2 style="margin:0">API Settings</h2>
+    <div class="dialog-toolbar">
+      <button id="btnTest" class="ghost">Test</button>
       <button id="btnSave" class="primary">Save</button>
       <button id="btnCloseAuth" class="ghost">Close</button>
     </div>
-    <p class="muted" style="margin-top:6px">We log exact URLs (with keys redacted) and responses. Endpoints per KB: /conferences, /vendors, /conferences/{id}/vendors, /sessions/upload, /sessions/{id}, /sessions/{id}/enrich, /vendors/{id}/sessions, /reports/session/{id}, /test/ping, /health.</p>
   </div>
-</dialog>
+  <label>Backend API Base URL</label>
+  <input id="apiUrl" placeholder="https://conference-buddy-geoutils.replit.app" />
+  <div class="grid2">
+    <div>
+      <label>API Key</label>
+      <input id="apiKey" type="password" placeholder="paste API key…" />
+    </div>
+    <div>
+      <label>Auth Mode</label>
+      <select id="authMode">
+        <option value="xapikey">Header: X-API-Key</option>
+        <option value="bearer">Header: Authorization: Bearer</option>
+        <option value="query">Query param (?apiKey=...)</option>
+      </select>
+    </div>
+  </div>
+  <div>
+    <label>Query parameter name (when using Query mode)</label>
+    <input id="authParam" placeholder="apiKey" />
+  </div>
+  <p class="muted">We log exact URLs (keys redacted), all headers, and bodies (sampled) for each request.</p>
+</div></dialog>
+
+<!-- Logs -->
+<dialog id="logsDialog"><div class="dialog-card">
+  <div class="row" style="justify-content:space-between;align-items:center">
+    <h2 style="margin:0">Diagnostics & Logs</h2>
+    <div class="row">
+      <select id="logVerbosity">
+        <option value="compact">Compact</option>
+        <option value="verbose">Verbose</option>
+      </select>
+      <button id="btnCopyLogs" class="ghost">Copy</button>
+      <button id="btnDownloadTxt" class="ghost">.txt</button>
+      <button id="btnDownloadJson" class="ghost">.json</button>
+      <button id="btnCloseLogs" class="ghost">Close</button>
+    </div>
+  </div>
+  <div id="logsView" class="dialog-status" style="min-height:260px;max-height:60vh"></div>
+</div></dialog>
+
+<!-- Self-Test -->
+<dialog id="selfTestDialog"><div class="dialog-card">
+  <div class="row" style="justify-content:space-between;align-items:center">
+    <h2 style="margin:0">API Self-Test Suite</h2>
+    <div class="row">
+      <button id="btnRunSelfTest" class="primary">Run Tests</button>
+      <button id="btnCloseSelfTest" class="ghost">Close</button>
+    </div>
+  </div>
+  <p class="muted">Runs OPTIONS probe, health, conferences list/create, vendor create, session upload (silent WAV), enrich, fetch meta/report. Uses your configured URL + key.</p>
+  <div id="selfTestOutput" class="dialog-status" style="min-height:220px;max-height:60vh"></div>
+</div></dialog>
 
 <!-- Add Conference -->
-<dialog id="confDialog"><div class="section">
-  <h2>New Conference</h2>
+<dialog id="confDialog"><div class="dialog-card">
+  <div class="row" style="justify-content:space-between;align-items:center">
+    <h2 style="margin:0">New Conference</h2>
+    <button class="ghost" onclick="document.getElementById('confDialog').close()">Close</button>
+  </div>
   <label>Name</label><input id="newConfName" placeholder="e.g., DEF CON 33" />
   <label>Start Date (optional)</label><input id="newConfDate" type="date" />
-  <div class="row" style="margin-top:8px">
+  <div class="row" style="justify-content:flex-end;margin-top:8px">
     <button id="btnCreateConf" class="primary">Create</button>
-    <button class="ghost" onclick="document.getElementById('confDialog').close()">Cancel</button>
   </div>
 </div></dialog>
 
 <!-- Add Vendor -->
-<dialog id="vendorDialog"><div class="section">
-  <h2>New Vendor</h2>
+<dialog id="vendorDialog"><div class="dialog-card">
+  <div class="row" style="justify-content:space-between;align-items:center">
+    <h2 style="margin:0">New Vendor</h2>
+    <button class="ghost" onclick="document.getElementById('vendorDialog').close()">Close</button>
+  </div>
   <label>Vendor Name</label><input id="newVendorName" placeholder="e.g., Acme Robotics" />
   <label>Link to Conference</label><select id="newVendorConf"></select>
-  <div class="row" style="margin-top:8px">
+  <div class="row" style="justify-content:flex-end;margin-top:8px">
     <button id="btnCreateVendor" class="primary">Create</button>
-    <button class="ghost" onclick="document.getElementById('vendorDialog').close()">Cancel</button>
   </div>
 </div></dialog>
 
 <!-- Session Detail -->
-<dialog id="detailDialog"><div class="section" id="detailContainer"></div></dialog>
-
-<!-- Logs Modal -->
-<dialog id="logsDialog"><div class="section">
-  <div class="row" style="justify-content:space-between">
-    <h2>Diagnostics & Logs</h2>
-    <div class="row" style="justify-content:flex-end">
-      <button id="btnCopyLogs" class="ghost">Copy</button>
-      <button id="btnDownloadTxt" class="ghost">Download .txt</button>
-      <button id="btnDownloadJson" class="ghost">Download .json</button>
-      <button id="btnCloseLogs" class="ghost">Close</button>
-    </div>
-  </div>
-  <div id="logsView" class="status" style="min-height:260px;max-height:60vh"></div>
-</div></dialog>
+<dialog id="detailDialog"><div class="dialog-card" id="detailContainer"></div></dialog>
 
 <script>
-/* -----------------------------------------------------------
-   Mobile-first SPA. CORS-safe modes + deep diagnostics.
-   Endpoints validated from Knowledge Base. (See docs)
-------------------------------------------------------------*/
+/* =========================
+   Mobile SPA with deep logs
+   ========================= */
 
-/* Elements */
+/* --- Element refs --- */
 const els = {
   apiStatus: document.getElementById('apiStatus'),
   btnOpenAuth: document.getElementById('btnOpenAuth'),
   btnLogs: document.getElementById('btnLogs'),
+  btnSelfTest: document.getElementById('btnSelfTest'),
+
   authDialog: document.getElementById('authDialog'),
   apiUrl: document.getElementById('apiUrl'),
   apiKey: document.getElementById('apiKey'),
@@ -248,13 +308,19 @@ const els = {
 
   logsDialog: document.getElementById('logsDialog'),
   logsView: document.getElementById('logsView'),
+  logVerbosity: document.getElementById('logVerbosity'),
   btnCopyLogs: document.getElementById('btnCopyLogs'),
   btnDownloadTxt: document.getElementById('btnDownloadTxt'),
   btnDownloadJson: document.getElementById('btnDownloadJson'),
   btnCloseLogs: document.getElementById('btnCloseLogs'),
+
+  selfTestDialog: document.getElementById('selfTestDialog'),
+  selfTestOutput: document.getElementById('selfTestOutput'),
+  btnRunSelfTest: document.getElementById('btnRunSelfTest'),
+  btnCloseSelfTest: document.getElementById('btnCloseSelfTest'),
 };
 
-/* Store */
+/* --- Persistent config --- */
 const store = {
   get api(){ return JSON.parse(localStorage.getItem('cb_api') || 'null'); },
   set api(v){ localStorage.setItem('cb_api', JSON.stringify(v)); },
@@ -262,25 +328,31 @@ const store = {
   set unknown(v){ localStorage.setItem('cb_unknown', JSON.stringify(v)); },
 };
 
-/* Logging + redaction */
-const LOG_CAP = 3000; let logBuffer = [];
+/* --- Logging with request/response capture --- */
+const LOG_CAP = 5000; let logBuffer = [];
 function redactHeaders(headers){
   const safe = {...headers};
   if('X-API-Key' in safe) safe['X-API-Key'] = '***';
   if('Authorization' in safe) safe['Authorization'] = '***';
   return safe;
 }
-function redactUrlKey(url, paramName){
+function redactUrlParam(url, paramName){
   try{
     const u = new URL(url);
     if (u.searchParams.has(paramName)) u.searchParams.set(paramName, '***');
     return u.toString();
   }catch{ return url; }
 }
+function objFromHeaders(headers){
+  const o = {};
+  try{ for(const [k,v] of headers.entries()) o[k] = v; }catch{}
+  return o;
+}
 function pushLog(entry){
   const now = new Date();
   const item = { t: now.toISOString(), ...entry };
   logBuffer.push(item); if(logBuffer.length>LOG_CAP) logBuffer.shift();
+  // UI line (compact)
   const label = (entry.level||'info').toUpperCase();
   const msg = entry.msg || '';
   const extra = entry.extra ? ` ${entry.extra}` : '';
@@ -294,24 +366,34 @@ function log(msg, level='info', extra=''){ pushLog({msg, level, extra}); }
 function netStart({method, url, headers, paramName}){
   const id = Math.random().toString(36).slice(2,9);
   const start = performance.now();
-  pushLog({ level:'info', msg:`HTTP ${method} ${redactUrlKey(url, paramName)}`, extra:'→ request', id, method, url: redactUrlKey(url, paramName), start, headers: redactHeaders(headers) });
+  const urlRed = redactUrlParam(url, paramName);
+  pushLog({ level:'info', msg:`HTTP ${method} ${urlRed}`, extra:'→ request', id, method, url:urlRed, start, reqHeaders:redactHeaders(headers) });
   return { id, start, method, url, paramName };
 }
 function netEnd(ctx, res, bodySample){
   const dur = (performance.now()-ctx.start).toFixed(0);
-  pushLog({ level:'info', msg:`HTTP ${ctx.method} ${redactUrlKey(ctx.url, ctx.paramName)}`, extra:`← ${res.status} ${res.statusText} (${dur}ms)`, id:ctx.id, dur, status:res.status, body: bodySample });
+  const h = objFromHeaders(res.headers||{});
+  pushLog({ level:'info', msg:`HTTP ${ctx.method} ${redactUrlParam(ctx.url, ctx.paramName)}`, extra:`← ${res.status} ${res.statusText} (${dur}ms)`, id:ctx.id, dur, status:res.status, resHeaders:h, body: bodySample });
 }
 function netErr(ctx, err){
   const dur = (performance.now()-ctx.start).toFixed(0);
-  pushLog({ level:'error', msg:`HTTP ${ctx.method} ${redactUrlKey(ctx.url, ctx.paramName)}`, extra:`✖ ${err.message} (${dur}ms)`, id:ctx.id, dur, error: String(err) });
-  if (String(err).includes('Failed to fetch')) log('Hint: CORS preflight blocked by browser. Switch to Query param mode or allowlist this origin on API.', 'warn');
+  pushLog({ level:'error', msg:`HTTP ${ctx.method} ${redactUrlParam(ctx.url, ctx.paramName)}`, extra:`✖ ${err.message} (${dur}ms)`, id:ctx.id, dur, error:String(err) });
+  if (String(err).includes('Failed to fetch')) log('Hint: CORS preflight blocked by browser. Confirm server CORS & allowed headers.', 'warn');
+}
+function showLogs(){
+  const verbose = els.logVerbosity.value === 'verbose';
+  const text = logBuffer.map(l=>{
+    if(!verbose) return `${l.t} [${(l.level||'info').toUpperCase()}] ${l.msg}${l.extra?(' '+l.extra):''}`;
+    return JSON.stringify(l, null, 2);
+  }).join('\n');
+  els.logsView.textContent = text || '(no logs yet)';
 }
 
-/* UI helpers */
+/* --- UI helpers --- */
 function setConnected(on){
   els.apiStatus.textContent = on ? 'Connected' : 'Disconnected';
   els.apiStatus.style.background = on ? '#062f14' : '';
-  els.apiStatus.style.color = on ? '#a7f3d0' : '';
+  els.apiStatus.style.color = on ? '#0b3a2a' : '';
   els.apiStatus.style.borderColor = on ? '#134e4a' : 'var(--border)';
 }
 function escapeHtml(str){ return str.replace(/[&<>"']/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s])); }
@@ -322,69 +404,69 @@ function addQuery(url, kv){
   return u.toString();
 }
 
-/* Auth helpers */
+/* --- Auth helpers --- */
 function buildAuthHeaders(mode, key){
   const h = {};
   if (mode === 'bearer') h['Authorization'] = `Bearer ${key}`;
   else if (mode === 'xapikey') h['X-API-Key'] = key;
-  // query mode => no headers
-  return h;
+  return h; // query mode uses URL only
 }
 function applyAuthToUrl(url, mode, key, paramName){
   if (mode === 'query') return addQuery(url, {[paramName]: key});
   return url;
 }
 
-/* Fetch wrapper with header→query fallback */
+/* --- Fetch wrapper (deep logs, response capture) --- */
 async function apiFetch(path, opts={}){
   const cfg = store.api;
   if(!cfg?.url) throw new Error('Missing API base URL. Open API Settings.');
   const method = (opts.method || 'GET').toUpperCase();
-  const preferMode = cfg.mode || 'auto';
+  const mode = cfg.mode || 'xapikey';
   const key = cfg.key || '';
   const paramName = cfg.param || 'apiKey';
 
-  const attempt = async (mode) => {
-    const baseUrl = joinUrl(cfg.url, path);
-    const url = applyAuthToUrl(baseUrl, mode, key, paramName);
-    const headers = { ...(opts.headers||{}), ...buildAuthHeaders(mode, key) };
-    // Do NOT force a Content-Type; let fetch set it (keeps FormData simple)
-    const ctx = netStart({ method, url, headers, paramName });
+  const baseUrl = joinUrl(cfg.url, path);
+  const url = applyAuthToUrl(baseUrl, mode, key, paramName);
+  const headers = { ...(opts.headers||{}), ...buildAuthHeaders(mode, key) };
+  // Don't force Content-Type; FormData requests keep browser-generated multipart boundary.
+  const ctx = netStart({ method, url, headers, paramName });
+
+  try{
     const res = await fetch(url, { method, headers, body: opts.body || undefined, mode:'cors', credentials:'omit' });
-    const ct = res.headers.get('content-type') || '';
-    // take sample for logs
+    const ct = (res.headers.get('content-type') || '').toLowerCase();
+
+    // Build a body sample for logs
     let bodySample = null;
     try{
       if (ct.includes('application/json')) {
-        const clone = await res.clone().json(); bodySample = JSON.stringify(clone).slice(0,2000);
-      } else { const txt = await res.clone().text(); bodySample = txt.slice(0,2000); }
-    }catch{}
+        const clone = await res.clone().json();
+        bodySample = JSON.stringify(clone).slice(0, 2000);
+      } else if (ct.includes('text/')) {
+        const txt = await res.clone().text();
+        bodySample = txt.slice(0, 2000);
+      } else {
+        const blob = await res.clone().blob();
+        bodySample = `[blob ${blob.type || 'application/octet-stream'} ${blob.size} bytes]`;
+      }
+    }catch{ /* ignore sampling errors */ }
+
     netEnd(ctx, res, bodySample);
+
     if(!res.ok){
       const detail = bodySample ? ` — ${bodySample}` : '';
-      const err = new Error(`HTTP ${res.status} ${res.statusText}${detail}`); err.status = res.status; throw err;
+      const err = new Error(`HTTP ${res.status} ${res.statusText}${detail}`);
+      err.status = res.status;
+      throw err;
     }
     if(ct.includes('application/json')) return res.json();
     return res.blob();
-  };
-
-  try{
-    if (preferMode === 'auto') {
-      try { return await attempt('xapikey'); }
-      catch(e){
-        if (String(e).includes('Failed to fetch')) {
-          log('Auto-fallback: retrying with Query param mode…', 'warn');
-          return await attempt('query');
-        }
-        throw e;
-      }
-    } else {
-      return await attempt(preferMode);
-    }
-  }catch(e){ throw e; }
+  }catch(e){
+    netErr(ctx, e);
+    throw e;
+  }
 }
 
-/* Dropdowns */
+/* --- Dropdowns --- */
 async function loadConferences(selectEl){
   const list = await apiFetch('/conferences');
   selectEl.innerHTML = '';
@@ -418,7 +500,7 @@ async function loadVendorsForConference(confId, selectEl){
   }
 }
 
-/* Unknown placeholders */
+/* --- Unknown placeholders --- */
 async function ensureUnknowns(){
   const cached = store.unknown;
   if(cached?.conferenceId && cached?.vendorId) return cached;
@@ -459,7 +541,7 @@ async function ensureUnknowns(){
   return out;
 }
 
-/* Recording */
+/* --- Recording --- */
 let mediaStream=null, mediaRecorder=null, audioChunks=[], recording=false;
 function resetRecording(){ audioChunks=[]; recording=false; els.pillAudio.textContent='idle'; els.pillSession.textContent='—'; }
 async function startRecording(){
@@ -481,7 +563,7 @@ async function stopRecordingGetBlob(){
   resetRecording(); return blob;
 }
 
-/* Images */
+/* --- Images (dynamic) --- */
 let imageFiles = [];
 function renderImagePreview(){
   els.imagePreview.innerHTML = '';
@@ -497,7 +579,7 @@ function renderImagePreview(){
 }
 els.imageInput.addEventListener('change', (e)=>{ imageFiles = imageFiles.concat(Array.from(e.target.files || [])); renderImagePreview(); });
 
-/* Upload & Enrich */
+/* --- Upload & Enrich --- */
 async function uploadSession({audioBlob, images, notes, conferenceId, vendorId}){
   const fd = new FormData();
   if(audioBlob) fd.append('audio', audioBlob, `session.${(audioBlob.type.split('/')[1]||'webm').split(';')[0]}`);
@@ -518,7 +600,7 @@ async function uploadSession({audioBlob, images, notes, conferenceId, vendorId})
   return sessionId;
 }
 
-/* Previous sessions */
+/* --- Previous sessions --- */
 async function loadPrevious(conferenceId, vendorId){
   const sessions = [];
   async function forVendor(vid){
@@ -588,48 +670,136 @@ async function openSessionDetail(sessionId){
   els.detailDialog.showModal();
 }
 
-/* Events */
+/* --- Self-Test Suite --- */
+function writeSelf(msg){ els.selfTestOutput.textContent += (els.selfTestOutput.textContent?'\n':'') + msg; }
+function mkSilentWav(seconds=1, sampleRate=8000){
+  // 16-bit PCM silence WAV
+  const numSamples = seconds * sampleRate;
+  const bytesPerSample = 2;
+  const blockAlign = 1 * bytesPerSample;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = numSamples * bytesPerSample;
+  const buf = new ArrayBuffer(44 + dataSize);
+  const dv = new DataView(buf);
+  let o = 0;
+  function w32(v){ dv.setUint32(o, v, true); o+=4; }
+  function w16(v){ dv.setUint16(o, v, true); o+=2; }
+  function ws(s){ for(let i=0;i<s.length;i++) dv.setUint8(o++, s.charCodeAt(i)); }
+  ws('RIFF'); w32(36 + dataSize); ws('WAVE');
+  ws('fmt '); w32(16); w16(1); w16(1); w32(sampleRate); w32(byteRate); w16(blockAlign); w16(16);
+  ws('data'); w32(dataSize);
+  // data is already zero (silence)
+  return new Blob([buf], { type:'audio/wav' });
+}
+async function runSelfTest(){
+  els.selfTestOutput.textContent = '';
+  try{
+    const cfg = store.api;
+    if(!cfg?.url || !cfg?.key) { writeSelf('✖ Missing URL or API key in settings.'); return; }
+    writeSelf('• Using base: ' + cfg.url);
+
+    // 1) OPTIONS preflight probe
+    const optionsUrl = joinUrl(cfg.url, '/conferences');
+    const ctx = netStart({method:'OPTIONS', url:optionsUrl, headers:{}, paramName:cfg.param||'apiKey'});
+    const res = await fetch(optionsUrl, { method:'OPTIONS', mode:'cors', credentials:'omit' });
+    const h = objFromHeaders(res.headers); netEnd(ctx, res, JSON.stringify(h).slice(0,1000));
+    writeSelf(`OPTIONS /conferences → ${res.status} (see Logs for headers)`);
+
+    // 2) /health
+    await apiFetch('/health'); writeSelf('GET /health ✓');
+
+    // 3) list conferences
+    const confs = await apiFetch('/conferences'); writeSelf(`GET /conferences ✓ (${(confs||[]).length} found)`);
+
+    // 4) create temp conference
+    const fdC = new FormData(); const cname = 'CB SelfTest ' + new Date().toISOString();
+    fdC.append('name', cname);
+    const cRes = await apiFetch('/conferences', { method:'POST', body: fdC });
+    const cid = cRes.id ?? cRes._id ?? cRes.uuid ?? cRes.conferenceId;
+    writeSelf(`POST /conferences ✓ id=${cid}`);
+
+    // 5) create vendor
+    const fdV = new FormData(); fdV.append('name','CB SelfTest Vendor'); fdV.append('conferenceId', cid);
+    const vRes = await apiFetch('/vendors', { method:'POST', body: fdV });
+    const vid = vRes.id ?? vRes._id ?? vRes.uuid ?? vRes.vendorId;
+    writeSelf(`POST /vendors ✓ id=${vid}`);
+
+    // 6) upload session (silent wav)
+    const silent = mkSilentWav(1,8000);
+    const upload = new FormData();
+    upload.append('audio', silent, 'selftest.wav');
+    upload.append('notes', 'Self-test upload at ' + new Date().toISOString());
+    upload.append('conferenceId', cid);
+    upload.append('vendorId', vid);
+    const sRes = await apiFetch('/sessions/upload', { method:'POST', body: upload });
+    const sid = sRes.id ?? sRes._id ?? sRes.uuid ?? sRes.sessionId;
+    writeSelf(`POST /sessions/upload ✓ id=${sid}`);
+
+    // 7) trigger enrich
+    await apiFetch(`/sessions/${encodeURIComponent(sid)}/enrich`, { method:'POST' });
+    writeSelf('POST /sessions/{id}/enrich ✓ (started)');
+
+    // 8) fetch session + report
+    await apiFetch(`/sessions/${encodeURIComponent(sid)}`); writeSelf('GET /sessions/{id} ✓');
+    await apiFetch(`/reports/session/${encodeURIComponent(sid)}`); writeSelf('GET /reports/session/{id} ✓');
+
+    writeSelf('✔ Self-Test completed. See Logs (Verbose) for full headers & body samples.');
+  }catch(e){
+    writeSelf('✖ Self-Test failed: ' + e.message + ' — check Logs for details.');
+  }
+}
+
+/* --- Events --- */
 els.btnOpenAuth.addEventListener('click', ()=>{
-  const cfg = store.api || {url:'https://conference-buddy-geoutils.replit.app',key:'',mode:'auto',param:'apiKey'};
+  // prefill with your last logs URL and your key if you want; defaults below for convenience
+  const cfg = store.api || { url:'https://conference-buddy-geoutils.replit.app', key:'', mode:'xapikey', param:'apiKey' };
   els.apiUrl.value = cfg.url || '';
   els.apiKey.value = cfg.key || '';
-  els.authMode.value = cfg.mode || 'auto';
+  els.authMode.value = cfg.mode || 'xapikey';
   els.authParam.value = cfg.param || 'apiKey';
   els.authDialog.showModal();
 });
 els.btnCloseAuth.addEventListener('click', ()=> els.authDialog.close());
-
 els.btnSave.addEventListener('click', ()=>{
   const url = els.apiUrl.value.trim();
   const key = els.apiKey.value.trim();
   const mode = els.authMode.value;
   const param = (els.authParam.value.trim() || 'apiKey');
   if(!url || !key){ alert('Please enter API base URL and API key.'); return; }
-  store.api = {url,key,mode,param};
+  store.api = { url, key, mode, param };
   setConnected(true);
   els.authDialog.close();
   boot();
 });
-
-/* Connectivity tester (with fallback) */
 els.btnTest.addEventListener('click', async ()=>{
-  const tests = ['/test/ping','/health','/conferences'];
-  let ok = 0, messages = [];
-  for (const p of tests){
-    try{ await apiFetch(p); messages.push('OK: '+p); ok++; }
-    catch(e){
-      messages.push('Fail: '+p+' — '+e.message);
-      if (String(e).includes('Failed to fetch') && (store.api?.mode!=='query')){
-        messages.push('…retry as Query param');
-        const old = store.api; store.api = {...old, mode:'query'};
-        try{ await apiFetch(p); messages.push('OK (query mode): '+p); ok++; }
-        catch(e2){ messages.push('Still failing: '+p+' — '+e2.message); }
-        store.api = old;
-      }
-    }
-  }
-  alert(messages.join('\n'));
+  try{
+    // Try OPTIONS + GET /conferences + /health quickly
+    const base = store.api?.url || els.apiUrl.value.trim();
+    const url = joinUrl(base, '/conferences');
+    const ctx = netStart({method:'OPTIONS', url, headers:{}, paramName:store.api?.param||'apiKey'});
+    const res = await fetch(url, { method:'OPTIONS', mode:'cors', credentials:'omit' });
+    netEnd(ctx, res, JSON.stringify(objFromHeaders(res.headers)).slice(0,1000));
+    await apiFetch('/health'); await apiFetch('/conferences');
+    alert('Connection OK (OPTIONS + GETs succeeded). Check Logs for details.');
+  }catch(e){ alert('Connection failed: ' + e.message); }
 });
+
+/* Logs modal */
+els.btnLogs.addEventListener('click', ()=>{ showLogs(); els.logsDialog.showModal(); });
+els.btnCloseLogs.addEventListener('click', ()=> els.logsDialog.close());
+els.logVerbosity.addEventListener('change', showLogs);
+els.btnCopyLogs.addEventListener('click', async ()=>{
+  try{ await navigator.clipboard.writeText(els.logsView.textContent || ''); alert('Logs copied'); }
+  catch(_){ alert('Copy failed. Select text and copy.'); }
+});
+function downloadBlob(name, blob){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0); }
+els.btnDownloadTxt.addEventListener('click', ()=> downloadBlob('cb-logs.txt', new Blob([els.logsView.textContent||''], {type:'text/plain'})));
+els.btnDownloadJson.addEventListener('click', ()=> downloadBlob('cb-logs.json', new Blob([JSON.stringify(logBuffer,null,2)], {type:'application/json'})));
+
+/* Self-Test modal */
+els.btnSelfTest.addEventListener('click', ()=> { els.selfTestOutput.textContent=''; els.selfTestDialog.showModal(); });
+els.btnCloseSelfTest.addEventListener('click', ()=> els.selfTestDialog.close());
+els.btnRunSelfTest.addEventListener('click', runSelfTest);
 
 /* Create dialogs */
 els.btnAddConf.addEventListener('click', ()=> els.confDialog.showModal());
@@ -667,6 +837,7 @@ els.btnCreateVendor.addEventListener('click', async ()=>{
 els.confSelect.addEventListener('change', async ()=>{ await loadVendorsForConference(els.confSelect.value, els.vendorSelect); });
 
 /* Record controls */
+els.imageInput.addEventListener('change', (e)=>{ imageFiles = imageFiles.concat(Array.from(e.target.files || [])); renderImagePreview(); });
 els.btnStart.addEventListener('click', async ()=>{
   if(!store.api){ return alert('Configure API first.'); }
   els.btnStart.disabled = true; els.btnStop.disabled = false;
@@ -677,7 +848,6 @@ els.btnStart.addEventListener('click', async ()=>{
     els.btnStart.disabled=false; els.btnStop.disabled=true; alert('Cannot start recording: ' + e.message);
   }
 });
-
 els.btnStop.addEventListener('click', async ()=>{
   els.btnStop.disabled = true;
   try{
@@ -719,34 +889,22 @@ els.btnLoadSessions.addEventListener('click', async ()=>{
   catch(e){ els.prevList.innerHTML = `<div class="section"><strong>Error:</strong> ${escapeHtml(e.message)}</div>`; }
 });
 
-/* Logs modal */
-els.btnLogs.addEventListener('click', ()=>{
-  els.logsView.textContent = logBuffer.map(l=>{
-    const base = `${l.t} [${(l.level||'info').toUpperCase()}] ${l.msg}${l.extra?(' '+l.extra):''}`;
-    if (l.body) return base + `\n  response: ${typeof l.body==='string'? l.body : JSON.stringify(l.body)}`;
-    return base;
-  }).join('\n');
-  els.logsDialog.showModal();
-});
-els.btnCloseLogs.addEventListener('click', ()=> els.logsDialog.close());
-els.btnCopyLogs.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(els.logsView.textContent||''); alert('Logs copied'); } catch(_){ alert('Copy failed. Select text and copy.'); }});
-function downloadBlob(name, blob){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0); }
-els.btnDownloadTxt.addEventListener('click', ()=> downloadBlob('cb-logs.txt', new Blob([els.logsView.textContent||''], {type:'text/plain'})));
-els.btnDownloadJson.addEventListener('click', ()=> downloadBlob('cb-logs.json', new Blob([JSON.stringify(logBuffer,null,2)], {type:'application/json'})));
-
-/* Dialog Esc */
-for(const d of [els.authDialog, els.confDialog, els.vendorDialog, els.detailDialog, els.logsDialog]){
+/* Dialog Esc handling */
+for(const d of [els.authDialog, els.confDialog, els.vendorDialog, els.detailDialog, els.logsDialog, els.selfTestDialog]){
   d?.addEventListener('cancel', e=>{ e.preventDefault(); d.close(); });
 }
 
 /* Boot */
-function setDefaultsIfMissing(){
-  if(!store.api){
-    store.api = { url:'https://conference-buddy-geoutils.replit.app', key:'', mode:'auto', param:'apiKey' };
-  }
-}
 async function boot(){
-  setDefaultsIfMissing();
+  // Pre-fill with your last-seen URL from logs (you can overwrite in the API dialog).
+  if(!store.api){
+    store.api = {
+      url: 'https://conference-buddy-geoutils.replit.app',
+      key: '', // paste your key in the dialog; we never log it
+      mode: 'xapikey', // CORS is fixed; use header auth by default
+      param: 'apiKey'
+    };
+  }
   const cfg = store.api;
   if(cfg){
     setConnected(true);
@@ -759,8 +917,6 @@ async function boot(){
       if(!els.confSelect.options.length) log('No conferences yet. You can record without selecting; we’ll use “Unknown Conference”.', 'warn');
     }catch(e){
       log('Could not load initial data: ' + e.message, 'error');
-      if (String(e).includes('HTTP 401')) log('Hint: Check API Key / auth mode.', 'warn');
-      if (String(e).includes('Failed to fetch')) log('Hint: CORS block — switch to Query param mode or allowlist this origin.', 'warn');
     }
   }else{
     setConnected(false);
@@ -770,4 +926,4 @@ async function boot(){
 boot();
 </script>
 </body>
-  </html>
+</html>
