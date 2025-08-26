@@ -2,178 +2,127 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Conference Buddy — Session Recorder</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Conference Buddy — Session Recorder (Mobile)</title>
 <style>
   :root{
-    --bg:#0b1220;--bg2:#0f1a33;--fg:#e6eefc;--muted:#9bb3e0;--accent:#3b82f6;--accent-2:#60a5fa;
-    --danger:#ef4444;--ok:#10b981;--card:#0d1426;--border:#1f2a44
+    --bg:#0a1020; --bg2:#0f1a33; --fg:#e6eefc; --muted:#9bb3e0; --accent:#3b82f6; --accent2:#60a5fa;
+    --danger:#ef4444; --ok:#10b981; --card:#0c1428; --border:#1f2a44;
   }
-  *{box-sizing:border-box} html,body{height:100%}
-  body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
-    background:linear-gradient(180deg,var(--bg),#0a1020 40%, #081025);color:var(--fg)}
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:linear-gradient(180deg,var(--bg),#071028);color:var(--fg);
+       font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
   a{color:var(--accent)}
-  .app{max-width:1100px;margin:0 auto;padding:16px;display:grid;grid-template-columns:320px 1fr;gap:16px}
-  header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;margin-bottom:4px;
-    background:var(--card);border:1px solid var(--border);border-radius:14px}
-  .badge{padding:4px 10px;border-radius:999px;background:#0b1a3a;border:1px solid var(--border);color:var(--muted);font-size:12px}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .pane{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px}
-  .pane h2,.pane h3{margin:.2rem 0 10px;font-size:16px;color:#d7e5ff}
-  label{font-size:12px;color:var(--muted);display:block;margin:6px 0 6px}
-  input,select,textarea,button{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);outline:none}
-  textarea{min-height:110px;resize:vertical}
-  button{cursor:pointer} button.primary{background:linear-gradient(180deg,var(--accent),var(--accent-2));border:none;color:white;font-weight:600}
-  button.ghost{background:transparent;border:1px solid var(--border)} button.danger{background:var(--danger);border:none}
+  /* Mobile-first single column */
+  .wrap{max-width:720px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:12px}
+  header{
+    position:sticky;top:0;z-index:40;background:linear-gradient(180deg,rgba(10,16,32,.95),rgba(10,16,32,.75));
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border);
+  }
+  .hbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 6px}
+  .brand{display:flex;gap:8px;align-items:center}
+  .badge{font-size:12px;border:1px solid var(--border);background:#0b1a3a;border-radius:999px;padding:4px 8px;color:#c5d7ff}
+  .chip{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:4px 8px;color:#b9caf2}
+  button,input,select,textarea{
+    width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);outline:none
+  }
+  button{cursor:pointer} button.primary{background:linear-gradient(180deg,var(--accent),var(--accent2));border:none;color:#fff;font-weight:700}
+  button.ghost{background:transparent;border:1px solid var(--border)}
+  button.danger{background:var(--danger);border:none;color:#fff}
   button:disabled{opacity:.6;cursor:not-allowed}
-  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-  .toolbar{display:flex;gap:8px;flex-wrap:wrap}
-  .preview{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
-  .chip{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:4px 8px;color:var(--muted)}
-  .status{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#0b152c;border:1px solid var(--border);border-radius:10px;padding:10px;max-height:200px;overflow:auto}
-  .list{display:grid;gap:8px;margin-top:8px}
-  .item{padding:10px;border:1px solid var(--border);border-radius:12px;background:#0c152b;display:grid;gap:6px}
-  .kv{display:flex;gap:6px;flex-wrap:wrap}
-  .kv span{font-size:12px;color:var(--muted)}
-  dialog{border:none;border-radius:16px;padding:0;background:transparent;color:inherit}
-  .modal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;min-width:60vw;max-height:80vh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.6)}
-  .right-actions{display:flex;gap:8px;justify-content:flex-end}
+  .section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px}
+  .section h2{margin:.2rem 0 8px;font-size:16px;color:#d7e5ff}
+  label{font-size:12px;color:var(--muted);display:block;margin:6px 0 6px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .pill{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;background:#0d2048;border:1px solid var(--border);border-radius:999px;color:#bcd1ff;font-size:12px}
-  .muted{color:var(--muted)} .thumb{width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--border)}
-  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .status{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;background:#0b152c;border:1px solid var(--border);border-radius:12px;padding:10px;max-height:40vh;overflow:auto}
+  .muted{color:var(--muted)}
+  .thumb{width:88px;height:88px;object-fit:cover;border-radius:10px;border:1px solid var(--border);position:relative}
+  .thumbwrap{position:relative} .removebtn{position:absolute;top:4px;right:4px;background:#0008;border:1px solid var(--border);color:#fff;border-radius:999px;padding:2px 6px;font-size:12px}
+  .preview{display:flex;gap:8px;flex-wrap:wrap}
+  .sticky-controls{position:sticky;top:54px;z-index:35}
+  /* Larger notes area for phones */
+  #notes{min-height:220px}
+  /* Desktop enhancements */
+  @media(min-width:900px){
+    .wrap{max-width:1100px}
+    #notes{min-height:260px}
+  }
 </style>
 </head>
 <body>
-<div class="app">
   <header>
-    <div class="row">
-      <strong>Conference Buddy · Session Recorder</strong>
-      <span class="badge">Dark/Blue · Minimal</span>
-    </div>
-    <div class="row">
-      <span id="apiStatus" class="chip">Disconnected</span>
-      <button id="btnOpenAuth" class="ghost">Login / API Settings</button>
-      <button id="btnLogs" class="ghost" title="View & export logs">Logs</button>
+    <div class="hbar">
+      <div class="brand">
+        <strong>Conference Buddy — Recorder</strong>
+        <span class="badge">mobile-first · dark/blue</span>
+      </div>
+      <div class="row">
+        <span id="apiStatus" class="chip">Disconnected</span>
+        <button id="btnLogs" class="ghost" title="View & export logs">Logs</button>
+        <button id="btnOpenAuth" class="ghost">API</button>
+      </div>
     </div>
   </header>
 
-  <!-- LEFT -->
-  <section class="pane">
-    <h2>New Session</h2>
-    <div class="grid-2">
-      <div>
-        <label for="confSelect">Conference</label>
-        <div class="toolbar">
-          <select id="confSelect" aria-label="Select conference"></select>
-          <button id="btnAddConf" class="ghost">+ New</button>
-        </div>
-      </div>
-      <div>
-        <label for="vendorSelect">Vendor</label>
-        <div class="toolbar">
-          <select id="vendorSelect" aria-label="Select vendor"></select>
-          <button id="btnAddVendor" class="ghost">+ New</button>
-        </div>
-      </div>
-    </div>
+  <main class="wrap">
+    <!-- SESSION RECORDER (TOP / STICKY CONTROLS) -->
+    <section class="section">
+      <h2>Session Recorder</h2>
 
-    <div class="grid-2" style="margin-top:8px">
-      <div>
-        <label>Images (you can take photos)</label>
+      <div class="sticky-controls">
+        <div class="grid2">
+          <div>
+            <label>Conference</label>
+            <div class="row">
+              <select id="confSelect" aria-label="Select conference"></select>
+              <button id="btnAddConf" class="ghost" title="Quick add conference">+ New</button>
+            </div>
+            <small class="muted">Optional; if blank we’ll use “Unknown Conference”.</small>
+          </div>
+          <div>
+            <label>Vendor</label>
+            <div class="row">
+              <select id="vendorSelect" aria-label="Select vendor"></select>
+              <button id="btnAddVendor" class="ghost" title="Quick add vendor">+ New</button>
+            </div>
+            <small class="muted">Optional; if blank we’ll use “Unknown Vendor”.</small>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:8px">
+          <button id="btnStart" class="primary">▶ Start (audio begins immediately)</button>
+          <button id="btnStop" class="danger" disabled>■ Stop & Upload</button>
+          <button id="btnPrevious" class="ghost">📜 Previous Sessions</button>
+        </div>
+
+        <div class="row" style="margin-top:8px">
+          <span class="pill">Audio: <strong id="pillAudio">idle</strong></span>
+          <span class="pill">Images: <strong id="pillImages">0</strong></span>
+          <span class="pill">Session ID: <strong id="pillSession">—</strong></span>
+        </div>
+      </div>
+
+      <div style="margin-top:8px">
+        <label>Notes</label>
+        <textarea id="notes" placeholder="Type notes here… (big space for handheld typing)"></textarea>
+      </div>
+
+      <div style="margin-top:8px">
+        <label>Photos</label>
         <input id="imageInput" type="file" accept="image/*" capture="environment" multiple />
         <div id="imagePreview" class="preview" aria-live="polite"></div>
+        <small class="muted">Tap to add more. Remove any image with ×.</small>
       </div>
-      <div>
-        <label for="notes">Notes</label>
-        <textarea id="notes" placeholder="Type quick notes here…"></textarea>
-      </div>
-    </div>
+    </section>
 
-    <div style="margin-top:10px" class="toolbar">
-      <button id="btnStart" class="primary">▶ Start Session (records audio immediately)</button>
-      <button id="btnStop" class="danger" disabled>■ Stop & Upload</button>
-      <button id="btnPrevious" class="ghost">📜 View Previous Sessions</button>
-    </div>
-    <p class="muted" style="margin-top:6px">Tip: leave this tab focused while recording for best results.</p>
-  </section>
-
-  <!-- RIGHT -->
-  <section class="pane">
-    <h2>Status & Logs</h2>
-    <div id="status" class="status" role="status" aria-live="polite">Ready.</div>
-    <div class="grid-3" style="margin-top:10px">
-      <div class="pill"><span>Audio:</span><strong id="pillAudio">idle</strong></div>
-      <div class="pill"><span>Images:</span><strong id="pillImages">0</strong></div>
-      <div class="pill"><span>Session ID:</span><strong id="pillSession">—</strong></div>
-    </div>
-  </section>
-</div>
-
-<!-- Auth / Settings Modal -->
-<dialog id="authDialog">
-  <div class="modal">
-    <h3>API Settings</h3>
-    <label>Backend API Base URL</label>
-    <input id="apiUrl" placeholder="https://conference-buddy-geoutils.replit.app" />
-    <div class="grid-2">
-      <div>
-        <label>API Key</label>
-        <input id="apiKey" type="password" placeholder="paste API key…" />
-      </div>
-      <div>
-        <label>Auth Header</label>
-        <select id="authMode">
-          <option value="xapikey">X-API-Key: &lt;key&gt; (default)</option>
-          <option value="bearer">Authorization: Bearer &lt;key&gt;</option>
-        </select>
-      </div>
-    </div>
-    <div class="right-actions" style="margin-top:10px">
-      <button id="btnTest" class="ghost">Test Connection</button>
-      <button id="btnSave" class="primary">Save</button>
-      <button id="btnCloseAuth" class="ghost">Close</button>
-    </div>
-    <p class="muted" style="margin-top:8px">Endpoints used: <code>/conferences</code>, <code>/vendors</code>, <code>/conferences/{id}/vendors</code>, <code>/sessions/upload</code>, <code>/sessions/{id}</code>, <code>/sessions/{id}/enrich</code>, <code>/vendors/{id}/sessions</code>, <code>/reports/session/{id}</code>. See Knowledge Base → API Reference. </p>
-  </div>
-</dialog>
-
-<!-- Add Conference -->
-<dialog id="confDialog">
-  <div class="modal">
-    <h3>New Conference</h3>
-    <label>Name</label>
-    <input id="newConfName" placeholder="e.g., DEF CON 33" />
-    <label>Start Date (optional)</label>
-    <input id="newConfDate" type="date" />
-    <div class="right-actions" style="margin-top:10px">
-      <button id="btnCreateConf" class="primary">Create</button>
-      <button class="ghost" onclick="document.getElementById('confDialog').close()">Cancel</button>
-    </div>
-  </div>
-</dialog>
-
-<!-- Add Vendor -->
-<dialog id="vendorDialog">
-  <div class="modal">
-    <h3>New Vendor</h3>
-    <label>Vendor Name</label>
-    <input id="newVendorName" placeholder="e.g., Acme Robotics" />
-    <label>Link to Conference</label>
-    <select id="newVendorConf"></select>
-    <div class="right-actions" style="margin-top:10px">
-      <button id="btnCreateVendor" class="primary">Create</button>
-      <button class="ghost" onclick="document.getElementById('vendorDialog').close()">Cancel</button>
-    </div>
-  </div>
-</dialog>
-
-<!-- Previous Sessions -->
-<dialog id="prevDialog">
-  <div class="modal">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-      <h3>Previous Sessions</h3>
-      <div class="grid-3" style="min-width:420px">
+    <!-- PREVIOUS SESSIONS (BOTTOM / SCROLL) -->
+    <section class="section">
+      <h2>Previous Sessions</h2>
+      <div class="grid2">
         <div>
           <label>Conference</label>
           <select id="prevConf"></select>
@@ -182,29 +131,78 @@
           <label>Vendor</label>
           <select id="prevVendor"></select>
         </div>
-        <div style="align-self:end">
-          <button id="btnLoadSessions" class="ghost">Load</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button id="btnLoadSessions" class="ghost">Load</button>
+      </div>
+      <div id="prevList" style="margin-top:8px;display:grid;gap:8px"></div>
+    </section>
+
+    <!-- STATUS -->
+    <section class="section">
+      <h2>Status & Diagnostics</h2>
+      <div id="status" class="status" role="status" aria-live="polite">Ready.</div>
+    </section>
+  </main>
+
+  <!-- API / Settings Modal -->
+  <dialog id="authDialog">
+    <div class="section">
+      <h2>API Settings</h2>
+      <label>Backend API Base URL</label>
+      <input id="apiUrl" placeholder="https://conference-buddy-geoutils.replit.app" />
+      <div class="grid2">
+        <div>
+          <label>API Key</label>
+          <input id="apiKey" type="password" placeholder="paste API key…" />
+        </div>
+        <div>
+          <label>Auth Header</label>
+          <select id="authMode">
+            <option value="xapikey">X-API-Key: &lt;key&gt; (default)</option>
+            <option value="bearer">Authorization: Bearer &lt;key&gt;</option>
+          </select>
         </div>
       </div>
+      <div class="row" style="margin-top:8px">
+        <button id="btnTest" class="ghost">Test Connection</button>
+        <button id="btnSave" class="primary">Save</button>
+        <button id="btnCloseAuth" class="ghost">Close</button>
+      </div>
+      <p class="muted" style="margin-top:6px">We’ll log the exact URLs used (e.g., <code>https://conference-buddy-geoutils.replit.app/conferences</code>) and the API responses.</p>
     </div>
-    <div id="prevList" class="list"></div>
-    <div class="right-actions" style="margin-top:10px">
-      <button class="ghost" onclick="document.getElementById('prevDialog').close()">Close</button>
+  </dialog>
+
+  <!-- Add Conference -->
+  <dialog id="confDialog"><div class="section">
+    <h2>New Conference</h2>
+    <label>Name</label><input id="newConfName" placeholder="e.g., DEF CON 33" />
+    <label>Start Date (optional)</label><input id="newConfDate" type="date" />
+    <div class="row" style="margin-top:8px">
+      <button id="btnCreateConf" class="primary">Create</button>
+      <button class="ghost" onclick="document.getElementById('confDialog').close()">Cancel</button>
     </div>
-  </div>
-</dialog>
+  </div></dialog>
 
-<!-- Session Detail -->
-<dialog id="detailDialog">
-  <div class="modal" id="detailContainer"></div>
-</dialog>
+  <!-- Add Vendor -->
+  <dialog id="vendorDialog"><div class="section">
+    <h2>New Vendor</h2>
+    <label>Vendor Name</label><input id="newVendorName" placeholder="e.g., Acme Robotics" />
+    <label>Link to Conference</label><select id="newVendorConf"></select>
+    <div class="row" style="margin-top:8px">
+      <button id="btnCreateVendor" class="primary">Create</button>
+      <button class="ghost" onclick="document.getElementById('vendorDialog').close()">Cancel</button>
+    </div>
+  </div></dialog>
 
-<!-- Logs Modal -->
-<dialog id="logsDialog">
-  <div class="modal">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-      <h3>Diagnostics & Logs</h3>
-      <div class="toolbar" style="justify-content:flex-end">
+  <!-- Session Detail -->
+  <dialog id="detailDialog"><div class="section" id="detailContainer"></div></dialog>
+
+  <!-- Logs Modal -->
+  <dialog id="logsDialog"><div class="section">
+    <div class="row" style="justify-content:space-between">
+      <h2>Diagnostics & Logs</h2>
+      <div class="row" style="justify-content:flex-end">
         <button id="btnCopyLogs" class="ghost">Copy</button>
         <button id="btnDownloadTxt" class="ghost">Download .txt</button>
         <button id="btnDownloadJson" class="ghost">Download .json</button>
@@ -212,18 +210,17 @@
       </div>
     </div>
     <div id="logsView" class="status" style="min-height:260px;max-height:60vh"></div>
-    <p class="muted" style="margin-top:8px">Includes network method, URL, status, timing, and error details (if any).</p>
-  </div>
-</dialog>
+  </div></dialog>
 
 <script>
-/**
- * Conference Buddy — Single-file SPA (GitHub Pages)
- * Fixes: avoid setting Content-Type on GET, richer logging & export, better connectivity tests.
- * Endpoints: per Knowledge Base (API Reference). See: /conferences, /vendors, /sessions/upload, /sessions/{id}, /sessions/{id}/enrich, /vendors/{id}/sessions, /reports/session/{id}.
+/** Mobile-first single-file SPA for GitHub Pages.
+ *  - Verifies and logs full request URLs
+ *  - Captures responses (truncated) into logs
+ *  - Lets you start without picking conference/vendor (creates/reuses “Unknown …”)
+ *  - Uses KB endpoints: /conferences, /vendors, /conferences/{id}/vendors, /sessions/upload, /sessions/{id}, /sessions/{id}/enrich, /vendors/{id}/sessions, /reports/session/{id}, /test/ping, /health
  */
 
-/* ===== Element refs ===== */
+/* ---------- Elements ---------- */
 const els = {
   apiStatus: document.getElementById('apiStatus'),
   btnOpenAuth: document.getElementById('btnOpenAuth'),
@@ -249,6 +246,11 @@ const els = {
   btnStop: document.getElementById('btnStop'),
   btnPrevious: document.getElementById('btnPrevious'),
 
+  prevConf: document.getElementById('prevConf'),
+  prevVendor: document.getElementById('prevVendor'),
+  btnLoadSessions: document.getElementById('btnLoadSessions'),
+  prevList: document.getElementById('prevList'),
+
   status: document.getElementById('status'),
   pillAudio: document.getElementById('pillAudio'),
   pillImages: document.getElementById('pillImages'),
@@ -264,12 +266,6 @@ const els = {
   newVendorConf: document.getElementById('newVendorConf'),
   btnCreateVendor: document.getElementById('btnCreateVendor'),
 
-  prevDialog: document.getElementById('prevDialog'),
-  prevConf: document.getElementById('prevConf'),
-  prevVendor: document.getElementById('prevVendor'),
-  btnLoadSessions: document.getElementById('btnLoadSessions'),
-  prevList: document.getElementById('prevList'),
-
   detailDialog: document.getElementById('detailDialog'),
   detailContainer: document.getElementById('detailContainer'),
 
@@ -281,48 +277,55 @@ const els = {
   btnCloseLogs: document.getElementById('btnCloseLogs'),
 };
 
-/* ===== Persistent config ===== */
+/* ---------- Store ---------- */
 const store = {
   get api(){ return JSON.parse(localStorage.getItem('cb_api') || 'null'); },
-  set api(v){ localStorage.setItem('cb_api', JSON.stringify(v)); }
+  set api(v){ localStorage.setItem('cb_api', JSON.stringify(v)); },
+  get unknown(){ return JSON.parse(localStorage.getItem('cb_unknown') || 'null'); },
+  set unknown(v){ localStorage.setItem('cb_unknown', JSON.stringify(v)); },
 };
 
-/* ===== Diagnostics logging (ring buffer + exporter) ===== */
-const LOG_CAP = 2000; // generous for a session
-let logBuffer = [];
+/* ---------- Logging with responses ---------- */
+const LOG_CAP = 3000; let logBuffer = [];
+function redactHeaders(headers){
+  const safe = {...headers};
+  if('X-API-Key' in safe) safe['X-API-Key'] = '***';
+  if('Authorization' in safe) safe['Authorization'] = '***';
+  return safe;
+}
 function pushLog(entry){
   const now = new Date();
   const item = { t: now.toISOString(), ...entry };
-  logBuffer.push(item);
-  if(logBuffer.length > LOG_CAP) logBuffer.shift();
-  // human line
-  const label = entry.level?.toUpperCase?.() || 'INFO';
+  logBuffer.push(item); if(logBuffer.length>LOG_CAP) logBuffer.shift();
+  const label = (entry.level||'info').toUpperCase();
   const msg = entry.msg || '';
   const extra = entry.extra ? ` ${entry.extra}` : '';
   const line = `[${now.toLocaleTimeString()}] [${label}] ${msg}${extra}`;
   els.status.textContent += (els.status.textContent ? '\n' : '') + line;
   els.status.scrollTop = els.status.scrollHeight;
-  // console
   const fn = entry.level==='error'?'error':(entry.level==='warn'?'warn':'log');
   console[fn](item);
 }
 function log(msg, level='info', extra=''){ pushLog({msg, level, extra}); }
-function netLogStart({method, url}){
+function netStart({method, url, headers}){
   const id = Math.random().toString(36).slice(2,9);
   const start = performance.now();
-  pushLog({ level:'info', msg:`HTTP ${method} ${url}`, extra:'→ request', id, method, url, start });
+  pushLog({ level:'info', msg:`HTTP ${method} ${url}`, extra:'→ request', id, method, url, start, headers: redactHeaders(headers) });
   return { id, start, method, url };
 }
-function netLogEnd(ctx, res){
-  const dur = (performance.now() - ctx.start).toFixed(0);
-  pushLog({ level:'info', msg:`HTTP ${ctx.method} ${ctx.url}`, extra:`← ${res.status} ${res.statusText} (${dur}ms)`, id:ctx.id, dur, status:res.status });
+function netEnd(ctx, res, bodySample){
+  const dur = (performance.now()-ctx.start).toFixed(0);
+  pushLog({ level:'info', msg:`HTTP ${ctx.method} ${ctx.url}`, extra:`← ${res.status} ${res.statusText} (${dur}ms)`, id:ctx.id, dur, status:res.status, body: bodySample });
 }
-function netLogError(ctx, err){
-  const dur = (performance.now() - ctx.start).toFixed(0);
+function netErr(ctx, err){
+  const dur = (performance.now()-ctx.start).toFixed(0);
   pushLog({ level:'error', msg:`HTTP ${ctx.method} ${ctx.url}`, extra:`✖ ${err.message} (${dur}ms)`, id:ctx.id, dur, error: String(err) });
+  if (String(err).includes('Failed to fetch')){
+    log('Hint: Usually a CORS preflight rejection or network block. Confirm API allows this origin and replies to OPTIONS.', 'warn');
+  }
 }
 
-/* ===== UI helpers ===== */
+/* ---------- UI helpers ---------- */
 function setConnected(on){
   els.apiStatus.textContent = on ? 'Connected' : 'Disconnected';
   els.apiStatus.style.background = on ? '#062f14' : '';
@@ -331,68 +334,68 @@ function setConnected(on){
 }
 function escapeHtml(str){ return str.replace(/[&<>"']/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s])); }
 
-/* ===== Auth headers ===== */
+/* ---------- Auth headers & URL join ---------- */
 function buildAuthHeaders(){
-  const cfg = store.api;
-  if(!cfg) throw new Error('API is not configured');
+  const cfg = store.api; if(!cfg) throw new Error('API is not configured');
   const h = {};
   if (cfg.mode === 'bearer') h['Authorization'] = `Bearer ${cfg.key}`;
   else h['X-API-Key'] = cfg.key;
   return h;
 }
+function joinUrl(base, path){
+  // Always ensure single slash separator: https://host + /route
+  return base.replace(/\/+$/,'') + (path.startsWith('/')? path : '/'+path);
+}
 
-/* ===== Fetch wrapper (fixed) =====
- * - Never sets Content-Type for GET/HEAD
- * - Sets Content-Type: application/json only if we have a JSON body
- * - Adds detailed network logs
- */
+/* ---------- Fetch wrapper (mobile) ---------- */
 async function apiFetch(path, opts={}){
   const cfg = store.api;
   if(!cfg?.url) throw new Error('Missing API base URL. Open API Settings.');
-  const url = cfg.url.replace(/\/+$/,'') + path;
+  const url = joinUrl(cfg.url, path);
   const method = (opts.method || 'GET').toUpperCase();
-
   const headers = { ...buildAuthHeaders(), ...(opts.headers||{}) };
-  // Only set Content-Type when sending JSON body
-  if (opts.body && !opts.formData && !headers['Content-Type']) {
-    headers['Content-Type'] = 'application/json';
-  }
-  const ctx = netLogStart({ method, url });
+  // Only set JSON Content-Type if sending a string/JSON (not FormData)
+  if (opts.body && !opts.formData && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+  const ctx = netStart({ method, url, headers });
 
   try{
     const res = await fetch(url, {
-      method,
-      headers,
+      method, headers,
       body: opts.body || undefined,
-      // Explicitly omit credentials/cookies; CORS relies on server allowing our origin.
-      credentials: 'omit',
+      mode: 'cors',
+      credentials: 'omit'
     });
-    netLogEnd(ctx, res);
 
     const ct = res.headers.get('content-type') || '';
+    // sample the body for logging (truncated)
+    let bodySample = null;
+    try{
+      if (ct.includes('application/json')) {
+        const clone = await res.clone().json();
+        bodySample = JSON.stringify(clone).slice(0, 2000); // truncate
+      } else {
+        const cloneTxt = await res.clone().text();
+        bodySample = cloneTxt.slice(0, 2000);
+      }
+    }catch(_){}
+
+    netEnd(ctx, res, bodySample);
+
     if(!res.ok){
-      let detail = '';
-      try{
-        if(ct.includes('application/json')) detail = (await res.json()).message || '';
-        else detail = await res.text();
-      }catch(_){}
-      const err = new Error(`HTTP ${res.status} ${res.statusText}${detail ? ' — ' + detail : ''}`);
+      const detail = bodySample ? ` — ${bodySample}` : '';
+      const err = new Error(`HTTP ${res.status} ${res.statusText}${detail}`);
       err.status = res.status;
       throw err;
     }
     if(ct.includes('application/json')) return res.json();
     return res.blob();
   }catch(e){
-    netLogError(ctx, e);
-    // Add helpful hint for classic CORS/network failure
-    if (String(e).includes('Failed to fetch')) {
-      log('Hint: This often indicates a CORS preflight rejection or network blockage. Ensure the API allows your GitHub Pages origin and responds to OPTIONS for this route.', 'warn');
-    }
+    netErr(ctx, e);
     throw e;
   }
 }
 
-/* ===== Dropdown population ===== */
+/* ---------- Dropdowns ---------- */
 async function loadConferences(selectEl){
   const list = await apiFetch('/conferences');
   selectEl.innerHTML = '';
@@ -426,8 +429,50 @@ async function loadVendorsForConference(confId, selectEl){
   }
 }
 
-/* ===== Recording state ===== */
-let mediaStream = null, mediaRecorder = null, audioChunks = [], recording = false;
+/* ---------- Unknown entities (on-demand create/reuse) ---------- */
+async function ensureUnknowns(){
+  // Cache in localStorage once created
+  const cached = store.unknown;
+  if(cached?.conferenceId && cached?.vendorId) return cached;
+
+  // Try to find existing by name
+  let confId = null, vendorId = null;
+  try{
+    const conferences = await apiFetch('/conferences');
+    const unk = (conferences||[]).find(c => (c.name||'').toLowerCase() === 'unknown conference');
+    if(unk) confId = unk.id ?? unk._id ?? unk.uuid ?? unk.conferenceId;
+  }catch(e){ log('Could not list conferences while searching for Unknown Conference: '+e.message,'warn'); }
+
+  if(!confId){
+    try{
+      const created = await apiFetch('/conferences', { method:'POST', body: JSON.stringify({ name: 'Unknown Conference' }) });
+      confId = created?.id ?? created?._id ?? created?.uuid ?? created?.conferenceId;
+      log(`Created Unknown Conference: ${confId}`);
+    }catch(e){ log('Failed to create Unknown Conference: '+e.message,'error'); throw e; }
+  }
+
+  // Try to find/create vendor under that conference
+  try{
+    const vendors = await apiFetch(`/conferences/${encodeURIComponent(confId)}/vendors`);
+    const uv = (vendors||[]).find(v => (v.name||'').toLowerCase() === 'unknown vendor');
+    if(uv) vendorId = uv.id ?? uv._id ?? uv.uuid ?? uv.vendorId;
+  }catch(e){ log('Could not list vendors for Unknown Conference: '+e.message,'warn'); }
+
+  if(!vendorId){
+    try{
+      const createdV = await apiFetch('/vendors', { method:'POST', body: JSON.stringify({ name: 'Unknown Vendor', conferenceId: confId }) });
+      vendorId = createdV?.id ?? createdV?._id ?? createdV?.uuid ?? createdV?.vendorId;
+      log(`Created Unknown Vendor: ${vendorId}`);
+    }catch(e){ log('Failed to create Unknown Vendor: '+e.message,'error'); throw e; }
+  }
+
+  const out = { conferenceId: confId, vendorId };
+  store.unknown = out;
+  return out;
+}
+
+/* ---------- Recording ---------- */
+let mediaStream=null, mediaRecorder=null, audioChunks=[], recording=false;
 function resetRecording(){ audioChunks=[]; recording=false; els.pillAudio.textContent='idle'; els.pillSession.textContent='—'; }
 async function startRecording(){
   try{ mediaStream = await navigator.mediaDevices.getUserMedia({ audio:true }); }
@@ -448,19 +493,23 @@ async function stopRecordingGetBlob(){
   resetRecording(); return blob;
 }
 
-/* ===== Image handling ===== */
+/* ---------- Images (dynamic) ---------- */
 let imageFiles = [];
 function renderImagePreview(){
   els.imagePreview.innerHTML = '';
-  for(const f of imageFiles){
+  imageFiles.forEach((f, idx)=>{
     const url = URL.createObjectURL(f);
-    const img = document.createElement('img'); img.src=url; img.className='thumb'; img.alt=f.name;
-    els.imagePreview.appendChild(img);
-  }
+    const wrap = document.createElement('div'); wrap.className='thumbwrap';
+    const img = document.createElement('img'); img.src=url; img.className='thumb'; img.alt = f.name;
+    const btn = document.createElement('button'); btn.className='removebtn'; btn.type='button'; btn.textContent='×';
+    btn.addEventListener('click', ()=>{ imageFiles.splice(idx,1); renderImagePreview(); });
+    wrap.appendChild(img); wrap.appendChild(btn); els.imagePreview.appendChild(wrap);
+  });
   els.pillImages.textContent = String(imageFiles.length);
 }
+els.imageInput.addEventListener('change', (e)=>{ imageFiles = imageFiles.concat(Array.from(e.target.files || [])); renderImagePreview(); });
 
-/* ===== Upload & Enrich ===== */
+/* ---------- Upload & Enrich ---------- */
 async function uploadSession({audioBlob, images, notes, conferenceId, vendorId}){
   const fd = new FormData();
   if(audioBlob) fd.append('audio', audioBlob, `session.${(audioBlob.type.split('/')[1]||'webm').split(';')[0]}`);
@@ -477,36 +526,41 @@ async function uploadSession({audioBlob, images, notes, conferenceId, vendorId})
   try{
     await apiFetch(`/sessions/${encodeURIComponent(sessionId)}/enrich`, { method:'POST' });
     log('Enrichment triggered.');
-  }catch(e){
-    log(`Warning: could not trigger enrichment automatically — ${e.message}`, 'warn');
-  }
+  }catch(e){ log(`Warning: could not trigger enrichment automatically — ${e.message}`,'warn'); }
   return sessionId;
 }
 
-/* ===== Previous sessions ===== */
+/* ---------- Previous sessions ---------- */
 async function loadPrevious(conferenceId, vendorId){
   const sessions = [];
   async function forVendor(vid){
     try{
       const list = await apiFetch(`/vendors/${encodeURIComponent(vid)}/sessions`);
-      for(const s of list || []) sessions.push(s);
+      (list||[]).forEach(s=> sessions.push(s));
     }catch(e){ log(`Error loading sessions for vendor ${vid}: ${e.message}`,'error'); }
   }
   if(vendorId) await forVendor(vendorId);
-  else{
+  else if(conferenceId){
     const vendors = await apiFetch(`/conferences/${encodeURIComponent(conferenceId)}/vendors`);
     for(const v of vendors || []){ const vid = v.id ?? v._id ?? v.vendorId ?? v.uuid; if(vid) await forVendor(vid); }
+  }else{
+    // If neither selected, try all vendors (fallback)
+    const allV = await apiFetch('/vendors');
+    for(const v of allV || []){ const vid = v.id ?? v._id ?? v.vendorId ?? v.uuid; if(vid) await forVendor(vid); }
   }
+
   els.prevList.innerHTML = '';
-  if(!sessions.length){ els.prevList.innerHTML = `<div class="item"><em>No sessions found.</em></div>`; return; }
+  if(!sessions.length){ els.prevList.innerHTML = `<div class="section"><em>No sessions found.</em></div>`; return; }
   for(const s of sessions){
     const sid = s.id ?? s.sessionId ?? s._id ?? s.uuid ?? '(unknown)';
     const status = s.status ?? s.state ?? 'uploaded';
     const when = s.createdAt ? new Date(s.createdAt).toLocaleString() : '';
-    const div = document.createElement('div'); div.className='item';
+    const div = document.createElement('div'); div.className='section';
     div.innerHTML = `
-      <div class="kv"><strong>Session ${sid}</strong><span>•</span><span class="muted">${status}</span>${when?`<span>•</span><span class="muted">${when}</span>`:''}</div>
-      <div class="right-actions"><button class="ghost" data-sid="${sid}">Open</button></div>`;
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div><strong>Session ${sid}</strong> <span class="muted">• ${status}${when?` • ${when}`:''}</span></div>
+        <button class="ghost" data-sid="${sid}">Open</button>
+      </div>`;
     div.querySelector('button').addEventListener('click', ()=> openSessionDetail(sid));
     els.prevList.appendChild(div);
   }
@@ -530,26 +584,26 @@ async function openSessionDetail(sessionId){
   const filesHtml = (files && files.length) ? `<ul>${files.map(f=>`<li><a href="${f.url||f.href||'#'}" target="_blank" rel="noopener">${f.name||f.filename||f.url||'file'}</a></li>`).join('')}</ul>` : `<em class="muted">No files</em>`;
 
   els.detailContainer.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-      <h3>Session ${sessionId}</h3>
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Session ${sessionId}</h2>
       <button class="ghost" onclick="document.getElementById('detailDialog').close()">Close</button>
     </div>
-    <div class="grid-3">
-      <div class="item"><strong>Files</strong>${filesHtml}</div>
-      <div class="item"><strong>Transcript</strong><pre class="status" style="max-height:180px">${transcript ? escapeHtml(String(transcript)) : '—'}</pre></div>
-      <div class="item"><strong>Image OCR</strong><pre class="status" style="max-height:180px">${ocr ? escapeHtml(typeof ocr==='string'? ocr : JSON.stringify(ocr,null,2)) : '—'}</pre></div>
+    <div class="grid2">
+      <div class="section"><strong>Files</strong>${filesHtml}</div>
+      <div class="section"><strong>Transcript</strong><pre class="status" style="max-height:180px">${transcript ? escapeHtml(String(transcript)) : '—'}</pre></div>
     </div>
-    <div class="item" style="margin-top:8px"><strong>Images</strong>${imgHtml}</div>
-    <div class="grid-2" style="margin-top:8px">
-      <div class="item"><strong>Notes</strong><pre class="status" style="max-height:140px">${notes ? escapeHtml(String(notes)) : '—'}</pre></div>
-      <div class="item"><strong>Summary</strong><pre class="status" style="max-height:140px">${summary ? escapeHtml(String(summary)) : '—'}</pre></div>
+    <div class="section"><strong>Image OCR</strong><pre class="status" style="max-height:180px">${ocr ? escapeHtml(typeof ocr==='string'? ocr : JSON.stringify(ocr,null,2)) : '—'}</pre></div>
+    <div class="section"><strong>Images</strong>${imgHtml}</div>
+    <div class="grid2">
+      <div class="section"><strong>Notes</strong><pre class="status" style="max-height:140px">${notes ? escapeHtml(String(notes)) : '—'}</pre></div>
+      <div class="section"><strong>Summary</strong><pre class="status" style="max-height:140px">${summary ? escapeHtml(String(summary)) : '—'}</pre></div>
     </div>`;
   els.detailDialog.showModal();
 }
 
-/* ===== Events ===== */
-els.btnOpenAuth.addEventListener('click', ()=> {
-  const cfg = store.api || {url:'',key:'',mode:'xapikey'};
+/* ---------- Events ---------- */
+els.btnOpenAuth.addEventListener('click', ()=>{
+  const cfg = store.api || {url:'https://conference-buddy-geoutils.replit.app',key:'',mode:'xapikey'};
   els.apiUrl.value = cfg.url || '';
   els.apiKey.value = cfg.key || '';
   els.authMode.value = cfg.mode || 'xapikey';
@@ -570,16 +624,11 @@ els.btnSave.addEventListener('click', ()=>{
 
 els.btnTest.addEventListener('click', async ()=>{
   try{
-    // try /test/ping (KB: Test & Development)
     await apiFetch('/test/ping');
-    alert('Connection OK ✔ (/test/ping)');
+    alert('OK: /test/ping');
   }catch(e1){
-    try{
-      await apiFetch('/health');
-      alert('Connection OK ✔ (/health)');
-    }catch(e2){
-      alert('Connection failed:\n' + e1.message + (e2? '\n' + e2.message : ''));
-    }
+    try{ await apiFetch('/health'); alert('OK: /health'); }
+    catch(e2){ alert('Connection failed:\n' + e1.message + '\n' + e2.message); }
   }
 });
 
@@ -609,7 +658,7 @@ els.btnCreateVendor.addEventListener('click', async ()=>{
     const created = await apiFetch('/vendors', { method:'POST', body: JSON.stringify({ name, conferenceId: confId }) });
     log('Vendor created: ' + (created?.id || created?.name || 'ok'));
     els.vendorDialog.close();
-    await loadVendorsForConference(els.confSelect.value, els.vendorSelect);
+    if(els.confSelect.value) await loadVendorsForConference(els.confSelect.value, els.vendorSelect);
     const vid = created?.id ?? created?._id ?? created?.uuid ?? created?.vendorId;
     if(vid) els.vendorSelect.value = vid;
   }catch(e){ alert('Create vendor failed: ' + e.message); }
@@ -617,15 +666,15 @@ els.btnCreateVendor.addEventListener('click', async ()=>{
 
 els.confSelect.addEventListener('change', async ()=>{ await loadVendorsForConference(els.confSelect.value, els.vendorSelect); });
 
-els.imageInput.addEventListener('change', (e)=>{ imageFiles = Array.from(e.target.files || []); renderImagePreview(); });
-
 els.btnStart.addEventListener('click', async ()=>{
   if(!store.api){ return alert('Configure API first.'); }
-  if(!els.confSelect.value){ return alert('Select a conference.'); }
-  if(!els.vendorSelect.value){ return alert('Select a vendor.'); }
   els.btnStart.disabled = true; els.btnStop.disabled = false;
-  try{ await startRecording(); log('Session started. Recording in progress.'); }
-  catch(e){ els.btnStart.disabled=false; els.btnStop.disabled=true; alert('Cannot start recording: ' + e.message); }
+  try{
+    await startRecording();
+    log('Session started. Recording in progress.');
+  }catch(e){
+    els.btnStart.disabled=false; els.btnStop.disabled=true; alert('Cannot start recording: ' + e.message);
+  }
 });
 
 els.btnStop.addEventListener('click', async ()=>{
@@ -633,13 +682,26 @@ els.btnStop.addEventListener('click', async ()=>{
   try{
     const audioBlob = await stopRecordingGetBlob();
     if(!audioBlob) throw new Error('No audio captured.');
+
+    let conferenceId = els.confSelect.value || null;
+    let vendorId = els.vendorSelect.value || null;
+
+    // If user didn't pick both, ensure "Unknown" ones exist and use them
+    if(!conferenceId || !vendorId){
+      const unk = await ensureUnknowns();
+      conferenceId = conferenceId || unk.conferenceId;
+      vendorId = vendorId || unk.vendorId;
+      log(`Using unknown placeholders — conference: ${conferenceId}, vendor: ${vendorId}`);
+    }
+
     const sessionId = await uploadSession({
       audioBlob, images: imageFiles, notes: els.notes.value,
-      conferenceId: els.confSelect.value, vendorId: els.vendorSelect.value
+      conferenceId, vendorId
     });
     alert('Uploaded! Session ID: ' + sessionId + '\nEnrichment started.');
-  }catch(e){ alert('Upload failed: ' + e.message); }
-  finally{
+  }catch(e){
+    alert('Upload failed: ' + e.message);
+  }finally{
     els.btnStart.disabled = false; imageFiles = []; renderImagePreview(); els.notes.value='';
   }
 });
@@ -647,24 +709,28 @@ els.btnStop.addEventListener('click', async ()=>{
 els.btnPrevious.addEventListener('click', async ()=>{
   await loadConferences(els.prevConf);
   if(els.prevConf.value) await loadVendorsForConference(els.prevConf.value, els.prevVendor);
-  els.prevDialog.showModal();
+  // Scroll to Previous Sessions section
+  document.querySelectorAll('h2')[1]?.scrollIntoView({behavior:'smooth'});
 });
 els.prevConf.addEventListener('change', async ()=>{ await loadVendorsForConference(els.prevConf.value, els.prevVendor); });
 els.btnLoadSessions.addEventListener('click', async ()=>{
-  els.prevList.innerHTML = '<div class="item"><em>Loading…</em></div>';
-  try{ await loadPrevious(els.prevConf.value, els.prevVendor.value || null); }
-  catch(e){ els.prevList.innerHTML = `<div class="item"><strong>Error:</strong> ${escapeHtml(e.message)}</div>`; }
+  els.prevList.innerHTML = '<div class="section"><em>Loading…</em></div>';
+  try{ await loadPrevious(els.prevConf.value || null, els.prevVendor.value || null); }
+  catch(e){ els.prevList.innerHTML = `<div class="section"><strong>Error:</strong> ${escapeHtml(e.message)}</div>`; }
 });
 
 /* Logs modal */
 els.btnLogs.addEventListener('click', ()=>{
-  els.logsView.textContent = logBuffer.map(l=>`${l.t} [${(l.level||'info').toUpperCase()}] ${l.msg}${l.extra?(' '+l.extra):''}`).join('\n');
+  els.logsView.textContent = logBuffer.map(l=>{
+    const base = `${l.t} [${(l.level||'info').toUpperCase()}] ${l.msg}${l.extra?(' '+l.extra):''}`;
+    if (l.body) return base + `\n  response: ${typeof l.body==='string'? l.body : JSON.stringify(l.body)}`;
+    return base;
+  }).join('\n');
   els.logsDialog.showModal();
 });
 els.btnCloseLogs.addEventListener('click', ()=> els.logsDialog.close());
 els.btnCopyLogs.addEventListener('click', async ()=>{
-  const text = els.logsView.textContent || '';
-  try{ await navigator.clipboard.writeText(text); alert('Logs copied to clipboard'); }
+  try{ await navigator.clipboard.writeText(els.logsView.textContent||''); alert('Logs copied'); }
   catch(_){ alert('Copy failed. Select text and copy manually.'); }
 });
 function downloadBlob(name, blob){
@@ -672,7 +738,7 @@ function downloadBlob(name, blob){
   document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
 }
 els.btnDownloadTxt.addEventListener('click', ()=>{
-  const text = logBuffer.map(l=>`${l.t} [${(l.level||'info').toUpperCase()}] ${l.msg}${l.extra?(' '+l.extra):''}`).join('\n');
+  const text = (els.logsView.textContent||'');
   downloadBlob('cb-logs.txt', new Blob([text], {type:'text/plain'}));
 });
 els.btnDownloadJson.addEventListener('click', ()=>{
@@ -680,11 +746,11 @@ els.btnDownloadJson.addEventListener('click', ()=>{
 });
 
 /* Dialog Esc handling */
-for(const d of [els.authDialog, els.confDialog, els.vendorDialog, els.prevDialog, els.detailDialog, els.logsDialog]){
+for(const d of [els.authDialog, els.confDialog, els.vendorDialog, els.detailDialog, els.logsDialog]){
   d?.addEventListener('cancel', e=>{ e.preventDefault(); d.close(); });
 }
 
-/* ===== Bootstrap ===== */
+/* ---------- Boot ---------- */
 async function boot(){
   const cfg = store.api;
   if(cfg){
@@ -692,15 +758,15 @@ async function boot(){
     try{
       await loadConferences(els.confSelect);
       if(els.confSelect.value) await loadVendorsForConference(els.confSelect.value, els.vendorSelect);
+      // Also for previous sessions filters
+      await loadConferences(els.prevConf);
+      if(els.prevConf.value) await loadVendorsForConference(els.prevConf.value, els.prevVendor);
       log('Dropdowns populated from API.');
-      if(!els.confSelect.options.length){
-        log('No conferences found yet. Create one with + New.', 'warn');
-      }
+      if(!els.confSelect.options.length) log('No conferences yet (that’s OK). You can record without selecting; we’ll use “Unknown Conference”.', 'warn');
     }catch(e){
       log('Could not load initial data: ' + e.message, 'error');
-      // Specific hints
       if (String(e).includes('HTTP 401')) log('Hint: Check API Key and auth header mode (X-API-Key vs Bearer).', 'warn');
-      if (String(e).includes('Failed to fetch')) log('Hint: Likely CORS/OPTIONS issue. Ensure the API allows your Pages origin and responds to OPTIONS for /conferences.', 'warn');
+      if (String(e).includes('Failed to fetch')) log('Hint: Likely CORS/OPTIONS issue. Ensure the API allows your Pages origin.', 'warn');
     }
   }else{
     setConnected(false);
