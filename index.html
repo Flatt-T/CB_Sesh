@@ -1,272 +1,233 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Conference Buddy — Session Recorder</title>
-  <style>
-    :root{
-      --bg:#0b1220;        /* deep blue */
-      --bg2:#0f1a33;       /* slightly lighter */
-      --fg:#e6eefc;        /* off-white */
-      --muted:#9bb3e0;     /* muted text */
-      --accent:#3b82f6;    /* blue accent */
-      --accent-2:#60a5fa;
-      --danger:#ef4444;
-      --ok:#10b981;
-      --card:#0d1426;
-      --border:#1f2a44;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
-      background:linear-gradient(180deg,var(--bg),#0a1020 40%, #081025);
-      color:var(--fg);
-    }
-    a{color:var(--accent)}
-    .app{
-      max-width:1100px;
-      margin:0 auto;
-      padding:16px;
-      display:grid;
-      grid-template-columns: 320px 1fr;
-      gap:16px;
-    }
-    header{
-      grid-column:1 / -1;
-      display:flex;align-items:center;justify-content:space-between;
-      padding:12px 16px;margin-bottom:4px;
-      background:var(--card);border:1px solid var(--border);border-radius:14px;
-    }
-    .badge{padding:4px 10px;border-radius:999px;background:#0b1a3a;border:1px solid var(--border);color:var(--muted);font-size:12px}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .pane{
-      background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;
-    }
-    .pane h2,.pane h3{margin:.2rem 0 10px;font-size:16px;color:#d7e5ff}
-    label{font-size:12px;color:var(--muted);display:block;margin:6px 0 6px}
-    input,select,textarea,button{
-      width:100%;padding:10px 12px;border-radius:10px;
-      border:1px solid var(--border);background:var(--bg2);color:var(--fg);
-      outline:none;
-    }
-    textarea{min-height:110px;resize:vertical}
-    button{cursor:pointer}
-    button.primary{background:linear-gradient(180deg,var(--accent),var(--accent-2));border:none;color:white;font-weight:600}
-    button.ghost{background:transparent;border:1px solid var(--border)}
-    button.danger{background:var(--danger);border:none}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-    .toolbar{display:flex;gap:8px;flex-wrap:wrap}
-    .preview{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
-    .chip{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:4px 8px;color:var(--muted)}
-    .status{
-      white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-      background:#0b152c;border:1px solid var(--border);border-radius:10px;padding:10px;max-height:200px;overflow:auto
-    }
-    .list{display:grid;gap:8px;margin-top:8px}
-    .item{
-      padding:10px;border:1px solid var(--border);border-radius:12px;background:#0c152b;
-      display:grid;gap:6px
-    }
-    .kv{display:flex;gap:6px;flex-wrap:wrap}
-    .kv span{font-size:12px;color:var(--muted)}
-    dialog{
-      border:none;border-radius:16px;padding:0;background:transparent;color:inherit;
-    }
-    .modal{
-      background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;min-width:60vw;max-height:80vh;overflow:auto;
-      box-shadow:0 20px 50px rgba(0,0,0,.6)
-    }
-    .right-actions{display:flex; gap:8px; justify-content:flex-end}
-    .pill{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;background:#0d2048;border:1px solid var(--border);border-radius:999px;color:#bcd1ff;font-size:12px}
-    .muted{color:var(--muted)}
-    .thumb{width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--border)}
-    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Conference Buddy — Session Recorder</title>
+<style>
+  :root{
+    --bg:#0b1220;--bg2:#0f1a33;--fg:#e6eefc;--muted:#9bb3e0;--accent:#3b82f6;--accent-2:#60a5fa;
+    --danger:#ef4444;--ok:#10b981;--card:#0d1426;--border:#1f2a44
+  }
+  *{box-sizing:border-box} html,body{height:100%}
+  body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+    background:linear-gradient(180deg,var(--bg),#0a1020 40%, #081025);color:var(--fg)}
+  a{color:var(--accent)}
+  .app{max-width:1100px;margin:0 auto;padding:16px;display:grid;grid-template-columns:320px 1fr;gap:16px}
+  header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;margin-bottom:4px;
+    background:var(--card);border:1px solid var(--border);border-radius:14px}
+  .badge{padding:4px 10px;border-radius:999px;background:#0b1a3a;border:1px solid var(--border);color:var(--muted);font-size:12px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pane{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px}
+  .pane h2,.pane h3{margin:.2rem 0 10px;font-size:16px;color:#d7e5ff}
+  label{font-size:12px;color:var(--muted);display:block;margin:6px 0 6px}
+  input,select,textarea,button{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);outline:none}
+  textarea{min-height:110px;resize:vertical}
+  button{cursor:pointer} button.primary{background:linear-gradient(180deg,var(--accent),var(--accent-2));border:none;color:white;font-weight:600}
+  button.ghost{background:transparent;border:1px solid var(--border)} button.danger{background:var(--danger);border:none}
+  button:disabled{opacity:.6;cursor:not-allowed}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+  .preview{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .chip{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:4px 8px;color:var(--muted)}
+  .status{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#0b152c;border:1px solid var(--border);border-radius:10px;padding:10px;max-height:200px;overflow:auto}
+  .list{display:grid;gap:8px;margin-top:8px}
+  .item{padding:10px;border:1px solid var(--border);border-radius:12px;background:#0c152b;display:grid;gap:6px}
+  .kv{display:flex;gap:6px;flex-wrap:wrap}
+  .kv span{font-size:12px;color:var(--muted)}
+  dialog{border:none;border-radius:16px;padding:0;background:transparent;color:inherit}
+  .modal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;min-width:60vw;max-height:80vh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.6)}
+  .right-actions{display:flex;gap:8px;justify-content:flex-end}
+  .pill{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;background:#0d2048;border:1px solid var(--border);border-radius:999px;color:#bcd1ff;font-size:12px}
+  .muted{color:var(--muted)} .thumb{width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--border)}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+</style>
 </head>
 <body>
-  <div class="app">
-    <header>
-      <div class="row">
-        <strong>Conference Buddy · Session Recorder</strong>
-        <span class="badge">Dark/Blue · Minimal</span>
-      </div>
-      <div class="row">
-        <span id="apiStatus" class="chip">Disconnected</span>
-        <button id="btnOpenAuth" class="ghost">Login / API Settings</button>
-      </div>
-    </header>
+<div class="app">
+  <header>
+    <div class="row">
+      <strong>Conference Buddy · Session Recorder</strong>
+      <span class="badge">Dark/Blue · Minimal</span>
+    </div>
+    <div class="row">
+      <span id="apiStatus" class="chip">Disconnected</span>
+      <button id="btnOpenAuth" class="ghost">Login / API Settings</button>
+      <button id="btnLogs" class="ghost" title="View & export logs">Logs</button>
+    </div>
+  </header>
 
-    <!-- LEFT: session controls -->
-    <section class="pane">
-      <h2>New Session</h2>
-
-      <div class="grid-2">
-        <div>
-          <label for="confSelect">Conference</label>
-          <div class="toolbar">
-            <select id="confSelect" aria-label="Select conference"></select>
-            <button id="btnAddConf" class="ghost" title="Quick add conference">+ New</button>
-          </div>
-        </div>
-        <div>
-          <label for="vendorSelect">Vendor</label>
-          <div class="toolbar">
-            <select id="vendorSelect" aria-label="Select vendor"></select>
-            <button id="btnAddVendor" class="ghost" title="Quick add vendor">+ New</button>
-          </div>
+  <!-- LEFT -->
+  <section class="pane">
+    <h2>New Session</h2>
+    <div class="grid-2">
+      <div>
+        <label for="confSelect">Conference</label>
+        <div class="toolbar">
+          <select id="confSelect" aria-label="Select conference"></select>
+          <button id="btnAddConf" class="ghost">+ New</button>
         </div>
       </div>
-
-      <div class="grid-2" style="margin-top:8px">
-        <div>
-          <label>Images (you can take photos)</label>
-          <input id="imageInput" type="file" accept="image/*" capture="environment" multiple />
-          <div id="imagePreview" class="preview" aria-live="polite"></div>
-        </div>
-        <div>
-          <label for="notes">Notes</label>
-          <textarea id="notes" placeholder="Type quick notes here…"></textarea>
+      <div>
+        <label for="vendorSelect">Vendor</label>
+        <div class="toolbar">
+          <select id="vendorSelect" aria-label="Select vendor"></select>
+          <button id="btnAddVendor" class="ghost">+ New</button>
         </div>
       </div>
+    </div>
 
-      <div style="margin-top:10px" class="toolbar">
-        <button id="btnStart" class="primary">▶ Start Session (records audio immediately)</button>
-        <button id="btnStop" class="danger" disabled>■ Stop & Upload</button>
-        <button id="btnPrevious" class="ghost">📜 View Previous Sessions</button>
+    <div class="grid-2" style="margin-top:8px">
+      <div>
+        <label>Images (you can take photos)</label>
+        <input id="imageInput" type="file" accept="image/*" capture="environment" multiple />
+        <div id="imagePreview" class="preview" aria-live="polite"></div>
       </div>
-
-      <p class="muted" style="margin-top:6px">Tip: leave this tab focused while recording for best results.</p>
-    </section>
-
-    <!-- RIGHT: status / logs -->
-    <section class="pane">
-      <h2>Status & Logs</h2>
-      <div id="status" class="status" role="status" aria-live="polite">Ready.</div>
-      <div class="grid-3" style="margin-top:10px">
-        <div class="pill"><span>Audio:</span><strong id="pillAudio">idle</strong></div>
-        <div class="pill"><span>Images:</span><strong id="pillImages">0</strong></div>
-        <div class="pill"><span>Session ID:</span><strong id="pillSession">—</strong></div>
+      <div>
+        <label for="notes">Notes</label>
+        <textarea id="notes" placeholder="Type quick notes here…"></textarea>
       </div>
-    </section>
+    </div>
+
+    <div style="margin-top:10px" class="toolbar">
+      <button id="btnStart" class="primary">▶ Start Session (records audio immediately)</button>
+      <button id="btnStop" class="danger" disabled>■ Stop & Upload</button>
+      <button id="btnPrevious" class="ghost">📜 View Previous Sessions</button>
+    </div>
+    <p class="muted" style="margin-top:6px">Tip: leave this tab focused while recording for best results.</p>
+  </section>
+
+  <!-- RIGHT -->
+  <section class="pane">
+    <h2>Status & Logs</h2>
+    <div id="status" class="status" role="status" aria-live="polite">Ready.</div>
+    <div class="grid-3" style="margin-top:10px">
+      <div class="pill"><span>Audio:</span><strong id="pillAudio">idle</strong></div>
+      <div class="pill"><span>Images:</span><strong id="pillImages">0</strong></div>
+      <div class="pill"><span>Session ID:</span><strong id="pillSession">—</strong></div>
+    </div>
+  </section>
+</div>
+
+<!-- Auth / Settings Modal -->
+<dialog id="authDialog">
+  <div class="modal">
+    <h3>API Settings</h3>
+    <label>Backend API Base URL</label>
+    <input id="apiUrl" placeholder="https://conference-buddy-geoutils.replit.app" />
+    <div class="grid-2">
+      <div>
+        <label>API Key</label>
+        <input id="apiKey" type="password" placeholder="paste API key…" />
+      </div>
+      <div>
+        <label>Auth Header</label>
+        <select id="authMode">
+          <option value="xapikey">X-API-Key: &lt;key&gt; (default)</option>
+          <option value="bearer">Authorization: Bearer &lt;key&gt;</option>
+        </select>
+      </div>
+    </div>
+    <div class="right-actions" style="margin-top:10px">
+      <button id="btnTest" class="ghost">Test Connection</button>
+      <button id="btnSave" class="primary">Save</button>
+      <button id="btnCloseAuth" class="ghost">Close</button>
+    </div>
+    <p class="muted" style="margin-top:8px">Endpoints used: <code>/conferences</code>, <code>/vendors</code>, <code>/conferences/{id}/vendors</code>, <code>/sessions/upload</code>, <code>/sessions/{id}</code>, <code>/sessions/{id}/enrich</code>, <code>/vendors/{id}/sessions</code>, <code>/reports/session/{id}</code>. See Knowledge Base → API Reference. </p>
   </div>
+</dialog>
 
-  <!-- Auth / Settings Modal -->
-  <dialog id="authDialog">
-    <div class="modal">
-      <h3>API Settings</h3>
-      <label>Backend API Base URL</label>
-      <input id="apiUrl" placeholder="https://your-api.example.com" />
-      <div class="grid-2">
+<!-- Add Conference -->
+<dialog id="confDialog">
+  <div class="modal">
+    <h3>New Conference</h3>
+    <label>Name</label>
+    <input id="newConfName" placeholder="e.g., DEF CON 33" />
+    <label>Start Date (optional)</label>
+    <input id="newConfDate" type="date" />
+    <div class="right-actions" style="margin-top:10px">
+      <button id="btnCreateConf" class="primary">Create</button>
+      <button class="ghost" onclick="document.getElementById('confDialog').close()">Cancel</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Add Vendor -->
+<dialog id="vendorDialog">
+  <div class="modal">
+    <h3>New Vendor</h3>
+    <label>Vendor Name</label>
+    <input id="newVendorName" placeholder="e.g., Acme Robotics" />
+    <label>Link to Conference</label>
+    <select id="newVendorConf"></select>
+    <div class="right-actions" style="margin-top:10px">
+      <button id="btnCreateVendor" class="primary">Create</button>
+      <button class="ghost" onclick="document.getElementById('vendorDialog').close()">Cancel</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Previous Sessions -->
+<dialog id="prevDialog">
+  <div class="modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <h3>Previous Sessions</h3>
+      <div class="grid-3" style="min-width:420px">
         <div>
-          <label>API Key</label>
-          <input id="apiKey" type="password" placeholder="paste API key…" />
+          <label>Conference</label>
+          <select id="prevConf"></select>
         </div>
         <div>
-          <label>Auth Header</label>
-          <select id="authMode">
-            <option value="xapikey">X-API-Key: &lt;key&gt; (default)</option>
-            <option value="bearer">Authorization: Bearer &lt;key&gt;</option>
-          </select>
+          <label>Vendor</label>
+          <select id="prevVendor"></select>
+        </div>
+        <div style="align-self:end">
+          <button id="btnLoadSessions" class="ghost">Load</button>
         </div>
       </div>
-      <div class="right-actions" style="margin-top:10px">
-        <button id="btnTest" class="ghost">Test Connection</button>
-        <button id="btnSave" class="primary">Save</button>
-        <button id="btnCloseAuth" class="ghost">Close</button>
-      </div>
-      <p class="muted" style="margin-top:8px">Endpoints used: <code>/conferences</code>, <code>/vendors</code>, <code>/conferences/{id}/vendors</code>, <code>/sessions/upload</code>, <code>/sessions/{id}</code>, <code>/sessions/{id}/enrich</code>, <code>/vendors/{id}/sessions</code>, <code>/reports/session/{id}</code>. See Knowledge Base → API Reference. </p>
     </div>
-  </dialog>
+    <div id="prevList" class="list"></div>
+    <div class="right-actions" style="margin-top:10px">
+      <button class="ghost" onclick="document.getElementById('prevDialog').close()">Close</button>
+    </div>
+  </div>
+</dialog>
 
-  <!-- Add Conference -->
-  <dialog id="confDialog">
-    <div class="modal">
-      <h3>New Conference</h3>
-      <label>Name</label>
-      <input id="newConfName" placeholder="e.g., DEF CON 33" />
-      <label>Start Date (optional)</label>
-      <input id="newConfDate" type="date" />
-      <div class="right-actions" style="margin-top:10px">
-        <button id="btnCreateConf" class="primary">Create</button>
-        <button class="ghost" onclick="document.getElementById('confDialog').close()">Cancel</button>
-      </div>
-    </div>
-  </dialog>
+<!-- Session Detail -->
+<dialog id="detailDialog">
+  <div class="modal" id="detailContainer"></div>
+</dialog>
 
-  <!-- Add Vendor -->
-  <dialog id="vendorDialog">
-    <div class="modal">
-      <h3>New Vendor</h3>
-      <label>Vendor Name</label>
-      <input id="newVendorName" placeholder="e.g., Acme Robotics" />
-      <label>Link to Conference</label>
-      <select id="newVendorConf"></select>
-      <div class="right-actions" style="margin-top:10px">
-        <button id="btnCreateVendor" class="primary">Create</button>
-        <button class="ghost" onclick="document.getElementById('vendorDialog').close()">Cancel</button>
+<!-- Logs Modal -->
+<dialog id="logsDialog">
+  <div class="modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <h3>Diagnostics & Logs</h3>
+      <div class="toolbar" style="justify-content:flex-end">
+        <button id="btnCopyLogs" class="ghost">Copy</button>
+        <button id="btnDownloadTxt" class="ghost">Download .txt</button>
+        <button id="btnDownloadJson" class="ghost">Download .json</button>
+        <button id="btnCloseLogs" class="ghost">Close</button>
       </div>
     </div>
-  </dialog>
-
-  <!-- Previous Sessions -->
-  <dialog id="prevDialog">
-    <div class="modal">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-        <h3>Previous Sessions</h3>
-        <div class="grid-3" style="min-width:420px">
-          <div>
-            <label>Conference</label>
-            <select id="prevConf"></select>
-          </div>
-          <div>
-            <label>Vendor</label>
-            <select id="prevVendor"></select>
-          </div>
-          <div style="align-self:end">
-            <button id="btnLoadSessions" class="ghost">Load</button>
-          </div>
-        </div>
-      </div>
-      <div id="prevList" class="list"></div>
-      <div class="right-actions" style="margin-top:10px">
-        <button class="ghost" onclick="document.getElementById('prevDialog').close()">Close</button>
-      </div>
-    </div>
-  </dialog>
-
-  <!-- Session Detail -->
-  <dialog id="detailDialog">
-    <div class="modal" id="detailContainer">
-      <!-- Populated dynamically -->
-    </div>
-  </dialog>
+    <div id="logsView" class="status" style="min-height:260px;max-height:60vh"></div>
+    <p class="muted" style="margin-top:8px">Includes network method, URL, status, timing, and error details (if any).</p>
+  </div>
+</dialog>
 
 <script>
 /**
- * Conference Buddy — Single-file SPA for GitHub Pages
- * ---------------------------------------------------
- * This script implements:
- *  - API settings (URL + API key), with header mode toggle (X-API-Key or Bearer)
- *  - Live dropdown population from API
- *  - Immediate audio recording on session start (MediaRecorder)
- *  - Multiple image capture/upload + previews
- *  - Notes capture
- *  - Upload to /sessions/upload then trigger /sessions/{id}/enrich
- *  - Previous sessions browser using /vendors/{id}/sessions and /reports/session/{id}
- *
- * IMPORTANT: Ensure your backend enables CORS for your Pages origin.
+ * Conference Buddy — Single-file SPA (GitHub Pages)
+ * Fixes: avoid setting Content-Type on GET, richer logging & export, better connectivity tests.
+ * Endpoints: per Knowledge Base (API Reference). See: /conferences, /vendors, /sessions/upload, /sessions/{id}, /sessions/{id}/enrich, /vendors/{id}/sessions, /reports/session/{id}.
  */
 
-/* ===== Utilities ===== */
-
+/* ===== Element refs ===== */
 const els = {
   apiStatus: document.getElementById('apiStatus'),
   btnOpenAuth: document.getElementById('btnOpenAuth'),
+  btnLogs: document.getElementById('btnLogs'),
   authDialog: document.getElementById('authDialog'),
   apiUrl: document.getElementById('apiUrl'),
   apiKey: document.getElementById('apiKey'),
@@ -310,73 +271,128 @@ const els = {
   prevList: document.getElementById('prevList'),
 
   detailDialog: document.getElementById('detailDialog'),
-  detailContainer: document.getElementById('detailContainer')
+  detailContainer: document.getElementById('detailContainer'),
+
+  logsDialog: document.getElementById('logsDialog'),
+  logsView: document.getElementById('logsView'),
+  btnCopyLogs: document.getElementById('btnCopyLogs'),
+  btnDownloadTxt: document.getElementById('btnDownloadTxt'),
+  btnDownloadJson: document.getElementById('btnDownloadJson'),
+  btnCloseLogs: document.getElementById('btnCloseLogs'),
 };
 
+/* ===== Persistent config ===== */
 const store = {
   get api(){ return JSON.parse(localStorage.getItem('cb_api') || 'null'); },
   set api(v){ localStorage.setItem('cb_api', JSON.stringify(v)); }
 };
 
-function log(msg, type='info'){
-  const stamp = new Date().toLocaleTimeString();
-  const line = `[${stamp}] ${msg}`;
+/* ===== Diagnostics logging (ring buffer + exporter) ===== */
+const LOG_CAP = 2000; // generous for a session
+let logBuffer = [];
+function pushLog(entry){
+  const now = new Date();
+  const item = { t: now.toISOString(), ...entry };
+  logBuffer.push(item);
+  if(logBuffer.length > LOG_CAP) logBuffer.shift();
+  // human line
+  const label = entry.level?.toUpperCase?.() || 'INFO';
+  const msg = entry.msg || '';
+  const extra = entry.extra ? ` ${entry.extra}` : '';
+  const line = `[${now.toLocaleTimeString()}] [${label}] ${msg}${extra}`;
   els.status.textContent += (els.status.textContent ? '\n' : '') + line;
   els.status.scrollTop = els.status.scrollHeight;
-  console[type === 'error' ? 'error' : 'log'](line);
+  // console
+  const fn = entry.level==='error'?'error':(entry.level==='warn'?'warn':'log');
+  console[fn](item);
 }
+function log(msg, level='info', extra=''){ pushLog({msg, level, extra}); }
+function netLogStart({method, url}){
+  const id = Math.random().toString(36).slice(2,9);
+  const start = performance.now();
+  pushLog({ level:'info', msg:`HTTP ${method} ${url}`, extra:'→ request', id, method, url, start });
+  return { id, start, method, url };
+}
+function netLogEnd(ctx, res){
+  const dur = (performance.now() - ctx.start).toFixed(0);
+  pushLog({ level:'info', msg:`HTTP ${ctx.method} ${ctx.url}`, extra:`← ${res.status} ${res.statusText} (${dur}ms)`, id:ctx.id, dur, status:res.status });
+}
+function netLogError(ctx, err){
+  const dur = (performance.now() - ctx.start).toFixed(0);
+  pushLog({ level:'error', msg:`HTTP ${ctx.method} ${ctx.url}`, extra:`✖ ${err.message} (${dur}ms)`, id:ctx.id, dur, error: String(err) });
+}
+
+/* ===== UI helpers ===== */
 function setConnected(on){
   els.apiStatus.textContent = on ? 'Connected' : 'Disconnected';
   els.apiStatus.style.background = on ? '#062f14' : '';
   els.apiStatus.style.color = on ? '#a7f3d0' : '';
   els.apiStatus.style.borderColor = on ? '#134e4a' : 'var(--border)';
 }
+function escapeHtml(str){ return str.replace(/[&<>"']/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s])); }
 
-/* Build headers per selected auth mode */
-function authHeaders(json=true){
+/* ===== Auth headers ===== */
+function buildAuthHeaders(){
   const cfg = store.api;
   if(!cfg) throw new Error('API is not configured');
   const h = {};
-  if (cfg.mode === 'bearer') {
-    h['Authorization'] = `Bearer ${cfg.key}`;
-  } else {
-    h['X-API-Key'] = cfg.key;
-  }
-  if(json) h['Content-Type'] = 'application/json';
+  if (cfg.mode === 'bearer') h['Authorization'] = `Bearer ${cfg.key}`;
+  else h['X-API-Key'] = cfg.key;
   return h;
 }
 
-/* Basic fetch wrapper with robust error handling and detailed messages */
+/* ===== Fetch wrapper (fixed) =====
+ * - Never sets Content-Type for GET/HEAD
+ * - Sets Content-Type: application/json only if we have a JSON body
+ * - Adds detailed network logs
+ */
 async function apiFetch(path, opts={}){
   const cfg = store.api;
   if(!cfg?.url) throw new Error('Missing API base URL. Open API Settings.');
   const url = cfg.url.replace(/\/+$/,'') + path;
-  const headers = opts.formData ? authHeaders(false) : {...authHeaders(true), ...(opts.headers||{})};
-  const res = await fetch(url, {
-    method: opts.method || 'GET',
-    headers,
-    body: opts.body || undefined,
-  });
-  const ct = res.headers.get('content-type') || '';
-  if(!res.ok){
-    let detail = '';
-    try{
-      if(ct.includes('application/json')){
-        const j = await res.json();
-        detail = j.message || j.error || JSON.stringify(j);
-      }else{
-        detail = await res.text();
-      }
-    }catch(_){}
-    const err = new Error(`HTTP ${res.status} ${res.statusText} — ${detail || 'Request failed'}`);
-    err.status = res.status;
-    throw err;
+  const method = (opts.method || 'GET').toUpperCase();
+
+  const headers = { ...buildAuthHeaders(), ...(opts.headers||{}) };
+  // Only set Content-Type when sending JSON body
+  if (opts.body && !opts.formData && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
   }
-  if(ct.includes('application/json')) return res.json();
-  return res.blob();
+  const ctx = netLogStart({ method, url });
+
+  try{
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: opts.body || undefined,
+      // Explicitly omit credentials/cookies; CORS relies on server allowing our origin.
+      credentials: 'omit',
+    });
+    netLogEnd(ctx, res);
+
+    const ct = res.headers.get('content-type') || '';
+    if(!res.ok){
+      let detail = '';
+      try{
+        if(ct.includes('application/json')) detail = (await res.json()).message || '';
+        else detail = await res.text();
+      }catch(_){}
+      const err = new Error(`HTTP ${res.status} ${res.statusText}${detail ? ' — ' + detail : ''}`);
+      err.status = res.status;
+      throw err;
+    }
+    if(ct.includes('application/json')) return res.json();
+    return res.blob();
+  }catch(e){
+    netLogError(ctx, e);
+    // Add helpful hint for classic CORS/network failure
+    if (String(e).includes('Failed to fetch')) {
+      log('Hint: This often indicates a CORS preflight rejection or network blockage. Ensure the API allows your GitHub Pages origin and responds to OPTIONS for this route.', 'warn');
+    }
+    throw e;
+  }
 }
 
-/* Populate dropdown helpers */
+/* ===== Dropdown population ===== */
 async function loadConferences(selectEl){
   const list = await apiFetch('/conferences');
   selectEl.innerHTML = '';
@@ -389,7 +405,7 @@ async function loadConferences(selectEl){
 }
 async function loadVendorsForConference(confId, selectEl){
   selectEl.innerHTML = '';
-  if(!confId){ return; }
+  if(!confId) return;
   try{
     const list = await apiFetch(`/conferences/${encodeURIComponent(confId)}/vendors`);
     for(const v of list || []){
@@ -399,8 +415,7 @@ async function loadVendorsForConference(confId, selectEl){
       selectEl.appendChild(opt);
     }
   }catch(e){
-    // Fallback: load all vendors if conference-scoped endpoint unavailable
-    log(`Warn: couldn't load vendors for conference — ${e.message}. Falling back to /vendors`);
+    log(`Warn: couldn't load vendors for conference — ${e.message}. Falling back to /vendors`, 'warn');
     const list = await apiFetch('/vendors');
     for(const v of list || []){
       const opt = document.createElement('option');
@@ -412,53 +427,25 @@ async function loadVendorsForConference(confId, selectEl){
 }
 
 /* ===== Recording state ===== */
-let mediaStream = null;
-let mediaRecorder = null;
-let audioChunks = [];
-let recording = false;
-
-function resetRecording(){
-  audioChunks = [];
-  recording = false;
-  els.pillAudio.textContent = 'idle';
-  els.pillSession.textContent = '—';
-}
-
+let mediaStream = null, mediaRecorder = null, audioChunks = [], recording = false;
+function resetRecording(){ audioChunks=[]; recording=false; els.pillAudio.textContent='idle'; els.pillSession.textContent='—'; }
 async function startRecording(){
-  // Request mic and start immediately (as required)
-  try{
-    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  }catch(err){
-    throw new Error('Microphone permission denied or unavailable.');
-  }
-
-  const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' :
-               MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' :
-               'audio/webm';
-  mediaRecorder = new MediaRecorder(mediaStream, { mimeType: mime });
-  audioChunks = [];
-  mediaRecorder.addEventListener('dataavailable', e => { if(e.data.size>0) audioChunks.push(e.data); });
-  mediaRecorder.addEventListener('stop', () => {
-    mediaStream.getTracks().forEach(t=>t.stop());
-  });
-  mediaRecorder.start(1000); // gather chunks every second
-  recording = true;
-  els.pillAudio.textContent = 'recording';
-  log('Audio recording started.');
+  try{ mediaStream = await navigator.mediaDevices.getUserMedia({ audio:true }); }
+  catch(err){ throw new Error('Microphone permission denied or unavailable.'); }
+  const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':
+               MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':'audio/webm';
+  mediaRecorder = new MediaRecorder(mediaStream,{ mimeType:mime });
+  audioChunks=[]; mediaRecorder.addEventListener('dataavailable', e=>{ if(e.data.size>0) audioChunks.push(e.data); });
+  mediaRecorder.addEventListener('stop', ()=>{ mediaStream.getTracks().forEach(t=>t.stop()); });
+  mediaRecorder.start(1000); recording=true; els.pillAudio.textContent='recording'; log('Audio recording started.');
 }
-
 async function stopRecordingGetBlob(){
   if(!mediaRecorder || !recording) return null;
-  const stopped = new Promise((resolve) => {
-    mediaRecorder.addEventListener('stop', resolve, { once:true });
-  });
-  mediaRecorder.stop();
-  log('Stopping recorder…');
-  await stopped;
-  const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+  const stopped = new Promise(resolve=> mediaRecorder.addEventListener('stop', resolve, { once:true }));
+  mediaRecorder.stop(); log('Stopping recorder…'); await stopped;
+  const blob = new Blob(audioChunks,{ type: mediaRecorder.mimeType || 'audio/webm' });
   log(`Audio captured: ${(blob.size/1024/1024).toFixed(2)} MB`);
-  resetRecording();
-  return blob;
+  resetRecording(); return blob;
 }
 
 /* ===== Image handling ===== */
@@ -467,14 +454,13 @@ function renderImagePreview(){
   els.imagePreview.innerHTML = '';
   for(const f of imageFiles){
     const url = URL.createObjectURL(f);
-    const img = document.createElement('img');
-    img.src = url; img.className = 'thumb'; img.alt = f.name;
+    const img = document.createElement('img'); img.src=url; img.className='thumb'; img.alt=f.name;
     els.imagePreview.appendChild(img);
   }
   els.pillImages.textContent = String(imageFiles.length);
 }
 
-/* ===== Session upload & enrichment ===== */
+/* ===== Upload & Enrich ===== */
 async function uploadSession({audioBlob, images, notes, conferenceId, vendorId}){
   const fd = new FormData();
   if(audioBlob) fd.append('audio', audioBlob, `session.${(audioBlob.type.split('/')[1]||'webm').split(';')[0]}`);
@@ -483,93 +469,56 @@ async function uploadSession({audioBlob, images, notes, conferenceId, vendorId})
   if(conferenceId) fd.append('conferenceId', conferenceId);
   if(vendorId) fd.append('vendorId', vendorId);
 
-  // POST /sessions/upload
-  const res = await apiFetch('/sessions/upload', {
-    method:'POST',
-    body: fd,
-    formData: true
-  });
-  // Expect a session object with id or similar
+  const res = await apiFetch('/sessions/upload', { method:'POST', body: fd, formData:true });
   const sessionId = res.id ?? res.sessionId ?? res._id ?? res.uuid;
-  if(!sessionId){
-    throw new Error('Upload succeeded but response did not include a session ID.');
-  }
-  log(`Uploaded. Session ID: ${sessionId}`);
-  els.pillSession.textContent = sessionId;
+  if(!sessionId) throw new Error('Upload succeeded but response did not include a session ID.');
+  log(`Uploaded. Session ID: ${sessionId}`); els.pillSession.textContent = sessionId;
 
-  // Trigger enrichment per KB: POST /sessions/{id}/enrich
   try{
     await apiFetch(`/sessions/${encodeURIComponent(sessionId)}/enrich`, { method:'POST' });
     log('Enrichment triggered.');
   }catch(e){
-    log(`Warning: could not trigger enrichment automatically — ${e.message}`);
+    log(`Warning: could not trigger enrichment automatically — ${e.message}`, 'warn');
   }
   return sessionId;
 }
 
-/* ===== Previous sessions browser ===== */
+/* ===== Previous sessions ===== */
 async function loadPrevious(conferenceId, vendorId){
-  // If vendor is chosen, use /vendors/{id}/sessions. If not, load conference vendors then aggregate.
   const sessions = [];
   async function forVendor(vid){
     try{
       const list = await apiFetch(`/vendors/${encodeURIComponent(vid)}/sessions`);
       for(const s of list || []) sessions.push(s);
-    }catch(e){
-      log(`Error loading sessions for vendor ${vid}: ${e.message}`,'error');
-    }
+    }catch(e){ log(`Error loading sessions for vendor ${vid}: ${e.message}`,'error'); }
   }
-  if(vendorId){
-    await forVendor(vendorId);
-  }else{
+  if(vendorId) await forVendor(vendorId);
+  else{
     const vendors = await apiFetch(`/conferences/${encodeURIComponent(conferenceId)}/vendors`);
-    for(const v of vendors || []){ /* serial to be polite; could parallelize */
-      const vid = v.id ?? v._id ?? v.vendorId ?? v.uuid;
-      if(vid) await forVendor(vid);
-    }
+    for(const v of vendors || []){ const vid = v.id ?? v._id ?? v.vendorId ?? v.uuid; if(vid) await forVendor(vid); }
   }
-  // Render list
   els.prevList.innerHTML = '';
-  if(sessions.length===0){
-    els.prevList.innerHTML = `<div class="item"><em>No sessions found.</em></div>`;
-    return;
-  }
+  if(!sessions.length){ els.prevList.innerHTML = `<div class="item"><em>No sessions found.</em></div>`; return; }
   for(const s of sessions){
     const sid = s.id ?? s.sessionId ?? s._id ?? s.uuid ?? '(unknown)';
     const status = s.status ?? s.state ?? 'uploaded';
     const when = s.createdAt ? new Date(s.createdAt).toLocaleString() : '';
-    const div = document.createElement('div');
-    div.className = 'item';
+    const div = document.createElement('div'); div.className='item';
     div.innerHTML = `
-      <div class="kv">
-        <strong>Session ${sid}</strong>
-        <span>•</span><span class="muted">${status}</span>
-        ${when ? `<span>•</span><span class="muted">${when}</span>`:''}
-      </div>
-      <div class="right-actions">
-        <button class="ghost" data-sid="${sid}">Open</button>
-      </div>
-    `;
+      <div class="kv"><strong>Session ${sid}</strong><span>•</span><span class="muted">${status}</span>${when?`<span>•</span><span class="muted">${when}</span>`:''}</div>
+      <div class="right-actions"><button class="ghost" data-sid="${sid}">Open</button></div>`;
     div.querySelector('button').addEventListener('click', ()=> openSessionDetail(sid));
     els.prevList.appendChild(div);
   }
 }
 
 async function openSessionDetail(sessionId){
-  // Grab metadata
-  let meta = null, report = null;
-  try{
-    meta = await apiFetch(`/sessions/${encodeURIComponent(sessionId)}`);
-  }catch(e){
-    log(`Error fetching session meta: ${e.message}`,'error');
-  }
-  try{
-    report = await apiFetch(`/reports/session/${encodeURIComponent(sessionId)}`);
-  }catch(e){
-    log(`Error fetching session report: ${e.message}`,'error');
-  }
+  let meta=null, report=null;
+  try{ meta = await apiFetch(`/sessions/${encodeURIComponent(sessionId)}`); }
+  catch(e){ log(`Error fetching session meta: ${e.message}`,'error'); }
+  try{ report = await apiFetch(`/reports/session/${encodeURIComponent(sessionId)}`); }
+  catch(e){ log(`Error fetching session report: ${e.message}`,'error'); }
 
-  // Build UI
   const files = (meta?.files||meta?.uploads||[]);
   const images = (report?.images || meta?.images || []);
   const ocr = report?.imageOcr || report?.ocr || null;
@@ -577,13 +526,8 @@ async function openSessionDetail(sessionId){
   const summary = report?.summary || null;
   const notes = meta?.notes || report?.notes || null;
 
-  const imgHtml = (images && images.length)
-   ? `<div class="preview">${images.map(u=>`<img src="${u}" class="thumb" alt="image">`).join('')}</div>` 
-   : `<em class="muted">No images</em>`;
-
-  const filesHtml = (files && files.length)
-   ? `<ul>${files.map(f=>`<li><a href="${f.url||f.href||'#'}" target="_blank" rel="noopener">${f.name||f.filename||f.url||'file'}</a></li>`).join('')}</ul>`
-   : `<em class="muted">No files</em>`;
+  const imgHtml = (images && images.length) ? `<div class="preview">${images.map(u=>`<img src="${u}" class="thumb" alt="image">`).join('')}</div>` : `<em class="muted">No images</em>`;
+  const filesHtml = (files && files.length) ? `<ul>${files.map(f=>`<li><a href="${f.url||f.href||'#'}" target="_blank" rel="noopener">${f.name||f.filename||f.url||'file'}</a></li>`).join('')}</ul>` : `<em class="muted">No files</em>`;
 
   els.detailContainer.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
@@ -591,39 +535,19 @@ async function openSessionDetail(sessionId){
       <button class="ghost" onclick="document.getElementById('detailDialog').close()">Close</button>
     </div>
     <div class="grid-3">
-      <div class="item">
-        <strong>Files</strong>
-        ${filesHtml}
-      </div>
-      <div class="item">
-        <strong>Transcript</strong>
-        <pre class="status" style="max-height:180px">${transcript ? escapeHtml(String(transcript)) : '—'}</pre>
-      </div>
-      <div class="item">
-        <strong>Image OCR</strong>
-        <pre class="status" style="max-height:180px">${ocr ? escapeHtml(typeof ocr==='string'? ocr : JSON.stringify(ocr,null,2)) : '—'}</pre>
-      </div>
+      <div class="item"><strong>Files</strong>${filesHtml}</div>
+      <div class="item"><strong>Transcript</strong><pre class="status" style="max-height:180px">${transcript ? escapeHtml(String(transcript)) : '—'}</pre></div>
+      <div class="item"><strong>Image OCR</strong><pre class="status" style="max-height:180px">${ocr ? escapeHtml(typeof ocr==='string'? ocr : JSON.stringify(ocr,null,2)) : '—'}</pre></div>
     </div>
-    <div class="item" style="margin-top:8px">
-      <strong>Images</strong>
-      ${imgHtml}
-    </div>
+    <div class="item" style="margin-top:8px"><strong>Images</strong>${imgHtml}</div>
     <div class="grid-2" style="margin-top:8px">
-      <div class="item">
-        <strong>Notes</strong>
-        <pre class="status" style="max-height:140px">${notes ? escapeHtml(String(notes)) : '—'}</pre>
-      </div>
-      <div class="item">
-        <strong>Summary</strong>
-        <pre class="status" style="max-height:140px">${summary ? escapeHtml(String(summary)) : '—'}</pre>
-      </div>
-    </div>
-  `;
+      <div class="item"><strong>Notes</strong><pre class="status" style="max-height:140px">${notes ? escapeHtml(String(notes)) : '—'}</pre></div>
+      <div class="item"><strong>Summary</strong><pre class="status" style="max-height:140px">${summary ? escapeHtml(String(summary)) : '—'}</pre></div>
+    </div>`;
   els.detailDialog.showModal();
 }
 
-/* ===== Event wiring ===== */
-
+/* ===== Events ===== */
 els.btnOpenAuth.addEventListener('click', ()=> {
   const cfg = store.api || {url:'',key:'',mode:'xapikey'};
   els.apiUrl.value = cfg.url || '';
@@ -637,52 +561,46 @@ els.btnSave.addEventListener('click', ()=>{
   const url = els.apiUrl.value.trim();
   const key = els.apiKey.value.trim();
   const mode = els.authMode.value;
-  if(!url || !key){
-    alert('Please enter API base URL and API key.');
-    return;
-  }
+  if(!url || !key){ alert('Please enter API base URL and API key.'); return; }
   store.api = {url,key,mode};
   setConnected(true);
   els.authDialog.close();
-  boot(); // reload lists
+  boot();
 });
 
 els.btnTest.addEventListener('click', async ()=>{
   try{
-    await apiFetch('/health');
-    alert('Connection OK ✔');
-  }catch(e){
-    alert('Connection failed: ' + e.message);
+    // try /test/ping (KB: Test & Development)
+    await apiFetch('/test/ping');
+    alert('Connection OK ✔ (/test/ping)');
+  }catch(e1){
+    try{
+      await apiFetch('/health');
+      alert('Connection OK ✔ (/health)');
+    }catch(e2){
+      alert('Connection failed:\n' + e1.message + (e2? '\n' + e2.message : ''));
+    }
   }
 });
 
-els.btnAddConf.addEventListener('click', async ()=>{
-  // preload conference list in modal for vendor creation convenience later
-  els.confDialog.showModal();
-});
-els.btnAddVendor.addEventListener('click', async ()=>{
-  // ensure conferences exist in dropdown
-  await loadConferences(els.newVendorConf);
-  els.vendorDialog.showModal();
-});
+els.btnAddConf.addEventListener('click', ()=> els.confDialog.showModal());
+els.btnAddVendor.addEventListener('click', async ()=>{ await loadConferences(els.newVendorConf); els.vendorDialog.showModal(); });
+
 els.btnCreateConf.addEventListener('click', async ()=>{
   try{
     const body = { name: els.newConfName.value.trim() };
-    const date = els.newConfDate.value;
-    if(date) body.date = date;
+    const date = els.newConfDate.value; if(date) body.date = date;
     if(!body.name) return alert('Please enter a conference name.');
     const created = await apiFetch('/conferences', { method:'POST', body: JSON.stringify(body) });
     log('Conference created: ' + (created?.id || created?.name || 'ok'));
     els.confDialog.close();
     await loadConferences(els.confSelect);
-    // select new conf if ID available
     const cid = created?.id ?? created?._id ?? created?.uuid ?? created?.conferenceId;
     if(cid) els.confSelect.value = cid;
     await loadVendorsForConference(els.confSelect.value, els.vendorSelect);
-  }catch(e){
-    alert('Create conference failed: ' + e.message);
-  }
+  }catch(e){ alert('Create conference failed: ' + e.message); }
 });
+
 els.btnCreateVendor.addEventListener('click', async ()=>{
   try{
     const name = els.newVendorName.value.trim();
@@ -692,76 +610,79 @@ els.btnCreateVendor.addEventListener('click', async ()=>{
     log('Vendor created: ' + (created?.id || created?.name || 'ok'));
     els.vendorDialog.close();
     await loadVendorsForConference(els.confSelect.value, els.vendorSelect);
-    // set vendor if id matches
     const vid = created?.id ?? created?._id ?? created?.uuid ?? created?.vendorId;
     if(vid) els.vendorSelect.value = vid;
-  }catch(e){
-    alert('Create vendor failed: ' + e.message);
-  }
+  }catch(e){ alert('Create vendor failed: ' + e.message); }
 });
 
-els.confSelect.addEventListener('change', async ()=>{
-  await loadVendorsForConference(els.confSelect.value, els.vendorSelect);
-});
+els.confSelect.addEventListener('change', async ()=>{ await loadVendorsForConference(els.confSelect.value, els.vendorSelect); });
 
-els.imageInput.addEventListener('change', (e)=>{
-  imageFiles = Array.from(e.target.files || []);
-  renderImagePreview();
-});
+els.imageInput.addEventListener('change', (e)=>{ imageFiles = Array.from(e.target.files || []); renderImagePreview(); });
 
 els.btnStart.addEventListener('click', async ()=>{
   if(!store.api){ return alert('Configure API first.'); }
   if(!els.confSelect.value){ return alert('Select a conference.'); }
   if(!els.vendorSelect.value){ return alert('Select a vendor.'); }
-  els.btnStart.disabled = true;
-  els.btnStop.disabled = false;
-  try{
-    await startRecording(); // MUST start immediately on session start
-    log('Session started. Recording in progress.');
-  }catch(e){
-    els.btnStart.disabled = false;
-    els.btnStop.disabled = true;
-    alert('Cannot start recording: ' + e.message);
-  }
+  els.btnStart.disabled = true; els.btnStop.disabled = false;
+  try{ await startRecording(); log('Session started. Recording in progress.'); }
+  catch(e){ els.btnStart.disabled=false; els.btnStop.disabled=true; alert('Cannot start recording: ' + e.message); }
 });
 
 els.btnStop.addEventListener('click', async ()=>{
   els.btnStop.disabled = true;
   try{
     const audioBlob = await stopRecordingGetBlob();
-    if(!audioBlob){ throw new Error('No audio captured.'); }
+    if(!audioBlob) throw new Error('No audio captured.');
     const sessionId = await uploadSession({
-      audioBlob,
-      images: imageFiles,
-      notes: els.notes.value,
-      conferenceId: els.confSelect.value,
-      vendorId: els.vendorSelect.value
+      audioBlob, images: imageFiles, notes: els.notes.value,
+      conferenceId: els.confSelect.value, vendorId: els.vendorSelect.value
     });
     alert('Uploaded! Session ID: ' + sessionId + '\nEnrichment started.');
-  }catch(e){
-    alert('Upload failed: ' + e.message);
-  }finally{
-    els.btnStart.disabled = false;
-    imageFiles = []; renderImagePreview(); els.notes.value='';
+  }catch(e){ alert('Upload failed: ' + e.message); }
+  finally{
+    els.btnStart.disabled = false; imageFiles = []; renderImagePreview(); els.notes.value='';
   }
 });
 
 els.btnPrevious.addEventListener('click', async ()=>{
   await loadConferences(els.prevConf);
-  await loadVendorsForConference(els.prevConf.value, els.prevVendor);
+  if(els.prevConf.value) await loadVendorsForConference(els.prevConf.value, els.prevVendor);
   els.prevDialog.showModal();
 });
-els.prevConf.addEventListener('change', async ()=>{
-  await loadVendorsForConference(els.prevConf.value, els.prevVendor);
-});
+els.prevConf.addEventListener('change', async ()=>{ await loadVendorsForConference(els.prevConf.value, els.prevVendor); });
 els.btnLoadSessions.addEventListener('click', async ()=>{
   els.prevList.innerHTML = '<div class="item"><em>Loading…</em></div>';
-  try{
-    await loadPrevious(els.prevConf.value, els.prevVendor.value || null);
-  }catch(e){
-    els.prevList.innerHTML = `<div class="item"><strong>Error:</strong> ${escapeHtml(e.message)}</div>`;
-  }
+  try{ await loadPrevious(els.prevConf.value, els.prevVendor.value || null); }
+  catch(e){ els.prevList.innerHTML = `<div class="item"><strong>Error:</strong> ${escapeHtml(e.message)}</div>`; }
 });
+
+/* Logs modal */
+els.btnLogs.addEventListener('click', ()=>{
+  els.logsView.textContent = logBuffer.map(l=>`${l.t} [${(l.level||'info').toUpperCase()}] ${l.msg}${l.extra?(' '+l.extra):''}`).join('\n');
+  els.logsDialog.showModal();
+});
+els.btnCloseLogs.addEventListener('click', ()=> els.logsDialog.close());
+els.btnCopyLogs.addEventListener('click', async ()=>{
+  const text = els.logsView.textContent || '';
+  try{ await navigator.clipboard.writeText(text); alert('Logs copied to clipboard'); }
+  catch(_){ alert('Copy failed. Select text and copy manually.'); }
+});
+function downloadBlob(name, blob){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+els.btnDownloadTxt.addEventListener('click', ()=>{
+  const text = logBuffer.map(l=>`${l.t} [${(l.level||'info').toUpperCase()}] ${l.msg}${l.extra?(' '+l.extra):''}`).join('\n');
+  downloadBlob('cb-logs.txt', new Blob([text], {type:'text/plain'}));
+});
+els.btnDownloadJson.addEventListener('click', ()=>{
+  downloadBlob('cb-logs.json', new Blob([JSON.stringify(logBuffer,null,2)], {type:'application/json'}));
+});
+
+/* Dialog Esc handling */
+for(const d of [els.authDialog, els.confDialog, els.vendorDialog, els.prevDialog, els.detailDialog, els.logsDialog]){
+  d?.addEventListener('cancel', e=>{ e.preventDefault(); d.close(); });
+}
 
 /* ===== Bootstrap ===== */
 async function boot(){
@@ -769,30 +690,24 @@ async function boot(){
   if(cfg){
     setConnected(true);
     try{
-      await Promise.all([
-        loadConferences(els.confSelect).then(()=> loadVendorsForConference(els.confSelect.value, els.vendorSelect)),
-      ]);
+      await loadConferences(els.confSelect);
+      if(els.confSelect.value) await loadVendorsForConference(els.confSelect.value, els.vendorSelect);
       log('Dropdowns populated from API.');
+      if(!els.confSelect.options.length){
+        log('No conferences found yet. Create one with + New.', 'warn');
+      }
     }catch(e){
       log('Could not load initial data: ' + e.message, 'error');
+      // Specific hints
+      if (String(e).includes('HTTP 401')) log('Hint: Check API Key and auth header mode (X-API-Key vs Bearer).', 'warn');
+      if (String(e).includes('Failed to fetch')) log('Hint: Likely CORS/OPTIONS issue. Ensure the API allows your Pages origin and responds to OPTIONS for /conferences.', 'warn');
     }
   }else{
     setConnected(false);
     els.authDialog.showModal();
   }
 }
-
-/* ===== Helpers ===== */
-function escapeHtml(str){ return str.replace(/[&<>"']/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s])); }
-
-/* Keyboard a11y for dialogs (Esc) */
-for(const d of [els.authDialog, els.confDialog, els.vendorDialog, els.prevDialog, els.detailDialog]){
-  d?.addEventListener('cancel', e=>{ e.preventDefault(); d.close(); });
-}
-
-/* Start app */
 boot();
-
 </script>
 </body>
-  </html>
+</html>
