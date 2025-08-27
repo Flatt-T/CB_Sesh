@@ -1,74 +1,56 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Conference Buddy — Session Recorder (Mobile)</title>
-  <meta name="color-scheme" content="dark light">
-  <style>
-    :root{
-      --bg:#0b1020; --panel:#0f1a33; --muted:#7aa0ff; --text:#e8f0ff; --accent:#2e5cff;
-      --warn:#ffc861; --error:#ff6b6b; --ok:#65d38c; --border:#1f2b4a;
-    }
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";}
-    *{box-sizing:border-box}
-    a{color:var(--muted);text-decoration:none}
-    .topbar{
-      position:sticky;top:0;z-index:30;background:linear-gradient(180deg, #0b1020 60%, #0b102000);
-      padding:10px 8px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center;
-    }
-    .pill{padding:10px 12px;border-radius:999px;background:#11224a;border:1px solid var(--border);color:var(--text);}
-    .pill input{width:210px;max-width:60vw;background:transparent;border:none;color:var(--text);outline:none}
-    .btn{
-      border:none;border-radius:10px;background:var(--accent);color:white;padding:12px 14px;font-weight:600;letter-spacing:.2px;
-    }
-    .btn.secondary{background:#142653;border:1px solid var(--border);}
-    .btn.ghost{background:transparent;border:1px solid var(--border);}
-    .btn.warn{background:var(--warn);color:#1a1200}
-    .btn.ok{background:var(--ok);color:#042113}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .stack{display:grid;gap:10px}
-    .card{
-      background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px;
-    }
-    .section-title{font-weight:700;opacity:.92;margin:0 0 6px 0}
-    .field{display:grid;gap:6px;margin:6px 0}
-    select,textarea,input[type="text"],input[type="date"],input[type="datetime-local"]{
-      width:100%;background:#0c1733;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;outline:none
-    }
-    textarea{min-height:140px;resize:vertical}
-    label{font-size:12px;opacity:.8}
-    .grid-2{display:grid;gap:10px;grid-template-columns:1fr 1fr}
-    @media (max-width:720px){.grid-2{grid-template-columns:1fr}}
-    .sticky-actions{
-      position:sticky;bottom:0;z-index:20;background:linear-gradient(0deg, #0b1020 60%, #0b102000);
-      padding:10px 8px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap
-    }
-    .hint{font-size:12px;opacity:.8}
-    .badge{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:999px;background:#0c1733}
-    .muted{opacity:.75}
-    .list{display:grid;gap:8px}
-    .imgGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-    .thumb{position:relative;border:1px dashed var(--border);border-radius:10px;overflow:hidden;background:#0c1733;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center}
-    .thumb img{max-width:100%;max-height:100%}
-    .thumb button{position:absolute;top:6px;right:6px}
-    dialog{border:none;background:var(--panel);color:var(--text);border-radius:14px;max-width:min(560px,92vw);width:92vw}
-    dialog::backdrop{background:rgba(0,0,0,.6)}
-    .logs{white-space:pre-wrap;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-size:12px;background:#0c1733;border:1px solid var(--border);border-radius:10px;padding:10px;max-height:40vh;overflow:auto}
-    .kbd{font-family:ui-monospace;background:#0c1733;border:1px solid var(--border);padding:2px 6px;border-radius:6px}
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Conference Buddy — Session Recorder</title>
+<meta name="color-scheme" content="dark light"/>
+<style>
+:root{
+  --bg:#0b1020;--panel:#0f1a33;--text:#e8f0ff;--muted:#7aa0ff;--accent:#2e5cff;
+  --warn:#ffc861;--ok:#65d38c;--border:#1f2b4a;--ink:#0c1733;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Arial}
+a{color:var(--muted);text-decoration:none}
+.topbar{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,#0b1020 60%,#0b102000);padding:10px 8px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.badge{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:999px;background:#0c1733}
+.muted{opacity:.75}
+.btn{border:none;border-radius:10px;background:var(--accent);color:#fff;padding:12px 14px;font-weight:600}
+.btn.secondary{background:#142653;border:1px solid var(--border)}
+.btn.ghost{background:transparent;border:1px solid var(--border)}
+.btn.warn{background:var(--warn);color:#1a1200}
+.btn.ok{background:var(--ok);color:#042113}
+.stack{display:grid;gap:10px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px}
+.section-title{font-weight:700;margin:0 0 6px 0}
+.field{display:grid;gap:6px;margin:6px 0}
+select,textarea,input[type="text"],input[type="date"]{width:100%;background:var(--ink);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;outline:none}
+textarea{min-height:120px;resize:vertical}
+.grid-2{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+@media (max-width:720px){.grid-2{grid-template-columns:1fr}}
+.sticky-actions{position:sticky;bottom:0;z-index:20;background:linear-gradient(0deg,#0b1020 60%,#0b102000);padding:10px 8px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap}
+.hint{font-size:12px;opacity:.8}
+.imgGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.thumb{position:relative;border:1px dashed var(--border);border-radius:10px;overflow:hidden;background:#0c1733;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center}
+.thumb img{max-width:100%;max-height:100%}
+.thumb button{position:absolute;top:6px;right:6px}
+.logs{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#0c1733;border:1px solid var(--border);border-radius:10px;padding:10px;max-height:40vh;overflow:auto}
+dialog{border:none;background:var(--panel);color:var(--text);border-radius:14px;max-width:min(560px,92vw);width:92vw}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+.kbd{font-family:ui-monospace;background:#0c1733;border:1px solid var(--border);padding:2px 6px;border-radius:6px}
+</style>
 </head>
 <body>
-  <!-- Top bar: API, Logs, Self-Test -->
   <div class="topbar">
-    <strong style="margin-right:.5rem">Conference Buddy</strong>
+    <strong style="margin-right:.4rem">Conference Buddy</strong>
     <button class="btn ghost" id="btnOpenApi">API</button>
     <button class="btn ghost" id="btnOpenLogs">Logs</button>
     <button class="btn ghost" id="btnSelfTest">Self-Test</button>
     <span id="connBadge" class="badge muted">Disconnected</span>
   </div>
 
-  <!-- Session Recorder (top) -->
   <section class="stack" style="padding:10px 8px">
     <div class="card">
       <h3 class="section-title">Session Recorder</h3>
@@ -76,23 +58,23 @@
         <div class="field">
           <label>Conference</label>
           <div class="row">
-            <select id="selConference" aria-label="Conference"></select>
+            <select id="selConference"></select>
             <button class="btn secondary" id="btnNewConf">+ New</button>
           </div>
-          <div class="hint">Optional; blank ⇒ “Unknown Conference”.</div>
+          <div class="hint">Optional; empty = “Unknown Conference”.</div>
         </div>
         <div class="field">
           <label>Vendor</label>
           <div class="row">
-            <select id="selVendor" aria-label="Vendor"></select>
+            <select id="selVendor"></select>
             <button class="btn secondary" id="btnNewVendor">+ New</button>
           </div>
-          <div class="hint">Optional; blank ⇒ “Unknown Vendor” (scoped to chosen conference).</div>
+          <div class="hint">Optional; empty = “Unknown Vendor”.</div>
         </div>
       </div>
 
       <div class="row" style="margin:8px 0">
-        <button class="btn ok" id="btnStart">▶ Start (audio begins)</button>
+        <button class="btn ok" id="btnStart">▶ Start</button>
         <button class="btn warn" id="btnStop">■ Stop & Upload</button>
         <button class="btn ghost" id="btnPrev">Previous Sessions</button>
       </div>
@@ -104,84 +86,63 @@
       </div>
 
       <div class="field" style="margin-top:10px">
-        <label>Notes</label>
-        <textarea id="txtNotes" placeholder="Type quick notes… (stored as user_notes)"></textarea>
+        <label>Notes (saved as <code>user_notes</code>)</label>
+        <textarea id="txtNotes" placeholder="Quick notes…"></textarea>
       </div>
 
       <div class="field">
         <label>Photos</label>
         <div class="imgGrid" id="imgGrid"></div>
         <div class="row">
-          <input id="filePhotos" type="file" accept="image/*" capture="environment" multiple style="display:none" />
+          <input id="filePhotos" type="file" accept="image/*" capture="environment" multiple style="display:none"/>
           <button class="btn secondary" id="btnAddPhoto">Add photo</button>
           <span class="hint">Tap to add; remove with <span class="kbd">×</span>.</span>
         </div>
       </div>
     </div>
 
-    <!-- Previous Sessions (bottom/scroll) -->
     <div class="card">
       <h3 class="section-title">Previous Sessions</h3>
       <div class="grid-2">
-        <div class="field">
-          <label>Conference</label>
-          <select id="selPrevConf"></select>
-        </div>
-        <div class="field">
-          <label>Vendor</label>
-          <select id="selPrevVendor"></select>
-        </div>
+        <div class="field"><label>Conference</label><select id="selPrevConf"></select></div>
+        <div class="field"><label>Vendor</label><select id="selPrevVendor"></select></div>
       </div>
-      <div class="row">
-        <button class="btn" id="btnLoadPrev">Load</button>
-      </div>
-      <div class="list" id="prevList" style="margin-top:8px"></div>
+      <div class="row"><button class="btn" id="btnLoadPrev">Load</button></div>
+      <div class="stack" id="prevList" style="margin-top:8px"></div>
     </div>
 
-    <!-- Status -->
     <div class="card">
       <h3 class="section-title">Status & Diagnostics</h3>
       <div id="status">Ready.</div>
     </div>
   </section>
 
-  <!-- Sticky actions -->
   <div class="sticky-actions">
     <button class="btn ghost" id="btnExportTxt">Export Logs (.txt)</button>
     <button class="btn ghost" id="btnExportJson">Export Logs (.json)</button>
-    <span class="hint">We redact keys in log. Use API panel to configure.</span>
+    <span class="hint">API panel stores Base URL & Key locally.</span>
   </div>
 
-  <!-- API Settings dialog -->
+  <!-- API dialog -->
   <dialog id="dlgApi">
     <form method="dialog" class="stack" style="padding:12px">
       <h3 class="section-title">API Settings</h3>
       <div class="grid-2">
-        <div class="field">
-          <label>Backend API Base URL</label>
-          <input type="text" id="apiBase" placeholder="https://…/api" />
-        </div>
-        <div class="field">
-          <label>API Key</label>
-          <input type="text" id="apiKey" placeholder="paste key" />
-        </div>
+        <div class="field"><label>Base URL</label><input id="apiBase" type="text" placeholder="https://…/api"/></div>
+        <div class="field"><label>API Key</label><input id="apiKey" type="text" placeholder="paste key"/></div>
       </div>
       <div class="field">
         <label>Auth Mode</label>
         <div class="row">
-          <label><input type="radio" name="authmode" value="xapikey" checked> Header: X-API-Key</label>
-          <label><input type="radio" name="authmode" value="bearer"> Header: Authorization: Bearer</label>
-          <label><input type="radio" name="authmode" value="query"> Query param (?apiKey=...)</label>
+          <label><input type="radio" name="authmode" value="xapikey" checked/> X-API-Key</label>
+          <label><input type="radio" name="authmode" value="bearer"/> Bearer</label>
+          <label><input type="radio" name="authmode" value="query"/> Query (?apiKey=…)</label>
         </div>
       </div>
-      <div class="field">
-        <label>Query parameter name (when using Query mode)</label>
-        <input type="text" id="apiQueryName" value="apiKey">
-      </div>
-      <div class="hint">We log exact URLs (keys redacted), all headers, and body samples for each request.</div>
+      <div class="field"><label>Query name (if Query mode)</label><input id="apiQueryName" type="text" value="apiKey"/></div>
       <div class="row" style="justify-content:flex-end">
-        <button class="btn ghost" value="test" id="btnApiTest">Test</button>
-        <button class="btn" value="default" id="btnApiSave">Save</button>
+        <button class="btn ghost" id="btnApiTest">Test</button>
+        <button class="btn" id="btnApiSave">Save</button>
         <button class="btn secondary" value="cancel">Close</button>
       </div>
     </form>
@@ -195,39 +156,33 @@
         <button class="btn ghost" id="btnLogCompact">Compact</button>
         <button class="btn ghost" id="btnLogVerbose">Verbose</button>
         <button class="btn ghost" id="btnLogCopy">Copy</button>
-        <button class="btn ghost" id="btnExportTxt2">.txt</button>
-        <button class="btn ghost" id="btnExportJson2">.json</button>
       </div>
-      <div class="logs" id="logsView">Booting…</div>
-      <div class="row" style="justify-content:flex-end">
-        <button class="btn secondary" value="cancel">Close</button>
-      </div>
+      <div id="logsView" class="logs">Booting…</div>
+      <div class="row" style="justify-content:flex-end"><button class="btn secondary" value="cancel">Close</button></div>
     </form>
   </dialog>
 
   <!-- Self-Test dialog -->
   <dialog id="dlgSelfTest">
     <form method="dialog" class="stack" style="padding:12px">
-      <h3 class="section-title">API Self-Test Suite</h3>
-      <div class="field">
-        <label><input type="checkbox" id="chkMultipart" /> Force multipart upload (debug)</label>
-      </div>
+      <h3 class="section-title">API Self-Test</h3>
+      <div class="hint">Runs GET /health & /conferences then a minimal JSON upload (no “notes”).</div>
       <div class="row">
         <button class="btn" id="btnRunTests">Run Tests</button>
         <button class="btn secondary" value="cancel">Close</button>
       </div>
-      <div class="logs" id="testsView">Idle.</div>
+      <div id="testsView" class="logs">Idle.</div>
     </form>
   </dialog>
 
-  <!-- New Conference dialog -->
+  <!-- New Conf -->
   <dialog id="dlgNewConf">
     <form method="dialog" class="stack" style="padding:12px">
       <h3 class="section-title">New Conference</h3>
-      <div class="field"><label>Name</label><input id="newConfName" type="text"></div>
+      <div class="field"><label>Name</label><input id="newConfName" type="text"/></div>
       <div class="grid-2">
-        <div class="field"><label>Start Date</label><input id="newConfStart" type="date"></div>
-        <div class="field"><label>End Date</label><input id="newConfEnd" type="date"></div>
+        <div class="field"><label>Start</label><input id="newConfStart" type="date"/></div>
+        <div class="field"><label>End</label><input id="newConfEnd" type="date"/></div>
       </div>
       <div class="row" style="justify-content:flex-end">
         <button class="btn" id="btnCreateConf">Create</button>
@@ -236,12 +191,12 @@
     </form>
   </dialog>
 
-  <!-- New Vendor dialog -->
+  <!-- New Vendor -->
   <dialog id="dlgNewVendor">
     <form method="dialog" class="stack" style="padding:12px">
       <h3 class="section-title">New Vendor</h3>
-      <div class="field"><label>Vendor Name</label><input id="newVendorName" type="text"></div>
-      <div class="field"><label>Link to Conference</label><select id="newVendorConf"></select></div>
+      <div class="field"><label>Name</label><input id="newVendorName" type="text"/></div>
+      <div class="field"><label>Conference</label><select id="newVendorConf"></select></div>
       <div class="row" style="justify-content:flex-end">
         <button class="btn" id="btnCreateVendor">Create</button>
         <button class="btn secondary" value="cancel">Close</button>
@@ -249,549 +204,340 @@
     </form>
   </dialog>
 
-  <!-- --- Minimal CB API shim (safeguard). Your real cb-api.js will override this. --- -->
+  <!-- Minimal API shim (overridden if cb-api.js is present) -->
   <script>
-    (function(){
-      if (window.CB) return; // if real api already loaded
-      const store = {
-        base: localStorage.getItem('cb.api.base') || '',
-        key:  localStorage.getItem('cb.api.key')  || '',
-        mode: localStorage.getItem('cb.api.mode') || 'xapikey',
-        qn:   localStorage.getItem('cb.api.qn')   || 'apiKey'
-      };
-      const redact = v => (typeof v==='string' && v.length>3) ? v.slice(0,1)+'***' : v;
-      const log = (lvl,msg,extra)=>window.__CB_LOG && window.__CB_LOG(lvl,msg,extra);
-      function headersJson(){
-        const h = {'Accept':'application/json'};
-        if (store.mode==='xapikey' && store.key) h['X-API-Key']=store.key;
-        if (store.mode==='bearer'  && store.key) h['Authorization']='Bearer '+store.key;
-        return h;
-      }
-      function withAuth(url){
-        if (store.mode!=='query' || !store.key) return url;
-        const u = new URL(url, location.href);
-        u.searchParams.set(store.qn||'apiKey', store.key);
-        return u.toString();
-      }
-      async function http(method, path, body, contentType){
-        if (!store.base) throw new Error('API base URL not configured.');
-        const url = withAuth(store.base.replace(/\/+$/,'') + path);
-        const id = Math.random().toString(36).slice(2,9);
-        const start = performance.now();
-        const reqHeaders = headersJson();
-        if (contentType) reqHeaders['Content-Type']=contentType;
-        log('info',`HTTP ${method} ${url}`, '→ request');
-        log('info', JSON.stringify({id,method,url,reqHeaders}));
-        const init = {method,headers:reqHeaders};
-        if (body!==undefined && body!==null) init.body = body;
-        const res = await fetch(url, init).catch(e=>{
-          log('error',`HTTP ${method} ${url}`, `✖ Failed to fetch`);
-          throw e;
-        });
-        const dur = Math.round(performance.now()-start);
-        const text = await res.text();
-        log('info',`HTTP ${method} ${url}`, `← ${res.status} ${res.statusText} (${dur}ms)`);
-        log('info', JSON.stringify({id,dur:String(dur),status:res.status,resHeaders:Object.fromEntries(res.headers.entries()),body:text}));
-        if (!res.ok){
-          const err = new Error(`HTTP ${res.status} ${res.statusText} — ${text}`);
-          err.status = res.status; throw err;
+  (function(){
+    if (window.CB) return;
+    const store = {
+      base: localStorage.getItem('cb.api.base') || '',
+      key:  localStorage.getItem('cb.api.key')  || '',
+      mode: localStorage.getItem('cb.api.mode') || 'xapikey',
+      qn:   localStorage.getItem('cb.api.qn')   || 'apiKey'
+    };
+    const redact = (k,v)=>{
+      if (/api[-_ ]?key|authorization/i.test(k)) return '***';
+      if (typeof v==='string' && v.length>256) return v.slice(0,256)+'…';
+      return v;
+    };
+    const log = (lvl,msg,extra)=>window.__CB_LOG && window.__CB_LOG(lvl,msg,extra);
+
+    function headersJson(){
+      const h={'Accept':'application/json'};
+      if (store.mode==='xapikey' && store.key) h['X-API-Key']=store.key;
+      if (store.mode==='bearer' && store.key)  h['Authorization']='Bearer '+store.key;
+      return h;
+    }
+    function withAuth(url){
+      if (store.mode!=='query' || !store.key) return url;
+      const u = new URL(url, location.href); u.searchParams.set(store.qn||'apiKey', store.key); return u.toString();
+    }
+    async function http(method,path,{jsonBody=null,rawBody=null,contentType}={}){
+      if (!store.base) throw new Error('API base URL not configured.');
+      const url = withAuth(store.base.replace(/\/+$/,'') + path);
+      const id = Math.random().toString(36).slice(2,9), start=performance.now();
+      const headers = headersJson(); if (contentType) headers['Content-Type']=contentType;
+      const init = {method,headers};
+      if (jsonBody!=null){ init.body = JSON.stringify(jsonBody); }
+      else if (rawBody!=null){ init.body = rawBody; }
+
+      log('info',`HTTP ${method} ${url}`,'→ request');
+      // Log request descriptor + JSON payload preview
+      const preview = jsonBody!=null ? JSON.stringify(jsonBody,(k,v)=>redact(k,v)) : (rawBody instanceof FormData ? '[FormData]' : (rawBody ? '[raw]' : ''));
+      log('info', JSON.stringify({id,method,url,reqHeaders:headers,body:preview}));
+
+      const res = await fetch(url, init);
+      const dur = Math.round(performance.now()-start);
+      const text = await res.text();
+      log('info',`HTTP ${method} ${url}`,`← ${res.status}  (${dur}ms)`);
+      log('info', JSON.stringify({id,dur:String(dur),status:res.status,resHeaders:Object.fromEntries(res.headers.entries()),body:text}));
+      if (!res.ok){ const err=new Error(`HTTP ${res.status} — ${text}`); err.status=res.status; throw err; }
+      try{return JSON.parse(text);}catch{return text;}
+    }
+
+    // Deep sanitize: convert any "notes" to "user_notes" (and remove "notes")
+    function sanitizeNotes(obj){
+      if (!obj || typeof obj!=='object') return obj;
+      if (Array.isArray(obj)){ return obj.map(sanitizeNotes); }
+      const out = {};
+      for (const [k,v] of Object.entries(obj)){
+        if (k==='notes'){ // rename
+          if (out.user_notes==null) out.user_notes = v;
+          continue; // drop original key
         }
-        try { return JSON.parse(text); } catch { return text; }
+        out[k]=sanitizeNotes(v);
       }
-      window.CB = {
-        config:{
-          get: ()=>({...store}),
-          set:(base,key,mode,qn)=>{ store.base=base; store.key=key; store.mode=mode; store.qn=qn||'apiKey';
-            localStorage.setItem('cb.api.base',store.base);
-            localStorage.setItem('cb.api.key',store.key);
-            localStorage.setItem('cb.api.mode',store.mode);
-            localStorage.setItem('cb.api.qn',store.qn);
-          }
-        },
-        listConfs:()=>http('GET','/conferences'),
-        listVendorsByConf:(id)=>http('GET',`/conferences/${id}/vendors`),
-        listVendors:()=>http('GET','/vendors'),
-        createConf:(payload)=>http('POST','/conferences', JSON.stringify(payload), 'application/json'),
-        createVendor:(payload)=>http('POST','/vendors', JSON.stringify(payload), 'application/json'),
-        health:()=>http('GET','/health'),
-        vendorsGet:(id)=>http('GET',`/vendors/${id}`),
-        // JSON-first upload — ONLY user_notes (never "notes")
-        uploadSessionJson:(payload)=>http('POST','/sessions/upload', JSON.stringify(payload), 'application/json'),
-        // Optional multipart (no explicit content-type)
-        uploadSessionMultipart:async (payload)=>{
-          const fd = new FormData();
-          for (const [k,v] of Object.entries(payload)){
-            if (v===undefined || v===null) continue;
-            if (k==='files' && Array.isArray(v)) v.forEach(f=>fd.append('files', f));
-            else fd.append(k, v);
-          }
-          return http('POST','/sessions/upload', fd /* no content-type */);
+      return out;
+    }
+
+    window.CB = {
+      config:{
+        get:()=>({...store}),
+        set:(base,key,mode,qn)=>{ store.base=base; store.key=key; store.mode=mode; store.qn=qn||'apiKey';
+          localStorage.setItem('cb.api.base',store.base);
+          localStorage.setItem('cb.api.key',store.key);
+          localStorage.setItem('cb.api.mode',store.mode);
+          localStorage.setItem('cb.api.qn',store.qn);
         }
-      };
-    })();
+      },
+      listConfs:()=>http('GET','/conferences'),
+      listVendors:()=>http('GET','/vendors'),
+      listVendorsByConf:(id)=>http('GET',`/conferences/${id}/vendors`),
+      createConf:(p)=>http('POST','/conferences',{jsonBody:p,contentType:'application/json'}),
+      createVendor:(p)=>http('POST','/vendors',{jsonBody:p,contentType:'application/json'}),
+      vendorsGet:(id)=>http('GET',`/vendors/${id}`),
+      health:()=>http('GET','/health'),
+
+      // JSON-only upload (per backend guidance). We sanitize away any "notes".
+      uploadSessionJson:(payload)=>{
+        const clean = sanitizeNotes(payload);
+        return http('POST','/sessions/upload',{jsonBody:clean,contentType:'application/json'});
+      }
+    };
+  })();
   </script>
 
-  <!-- --- App logic & UI bindings --- -->
+  <!-- App logic -->
   <script>
-    (function(){
-      // ---------- Logging ----------
-      const logs = [];
-      const listeners = {};
-      window.__CB_LOG = (level,msg,extra='')=>{
-        const entry = { t:new Date().toISOString(), level, msg, extra };
-        logs.push(entry);
-        if (listeners['log']) listeners['log'](entry);
-      };
-      const log = (...a)=>window.__CB_LOG(...a);
+  (function(){
+    // ---- Logger ----
+    const logs=[]; const listeners={};
+    window.__CB_LOG=(level,msg,extra='')=>{
+      const entry={t:new Date().toISOString(),level,msg,extra};
+      logs.push(entry);
+      if (listeners.log) listeners.log(entry);
+    };
+    const log=(...a)=>window.__CB_LOG(...a);
 
-      // ---------- Elements ----------
-      const $ = sel => document.querySelector(sel);
-      const on = (el,evt,fn)=>el.addEventListener(evt,fn,{passive:false});
+    // ---- DOM ----
+    const $=s=>document.querySelector(s);
+    const on=(el,ev,fn)=>el.addEventListener(ev,fn,{passive:false});
+    const el={
+      btnOpenApi:$('#btnOpenApi'),btnOpenLogs:$('#btnOpenLogs'),btnSelfTest:$('#btnSelfTest'),connBadge:$('#connBadge'),
+      selConference:$('#selConference'),selVendor:$('#selVendor'),btnNewConf:$('#btnNewConf'),btnNewVendor:$('#btnNewVendor'),
+      btnStart:$('#btnStart'),btnStop:$('#btnStop'),btnPrev:$('#btnPrev'),
+      badgeAudio:$('#badgeAudio'),badgeImages:$('#badgeImages'),badgeSession:$('#badgeSession'),
+      txtNotes:$('#txtNotes'),imgGrid:$('#imgGrid'),filePhotos:$('#filePhotos'),btnAddPhoto:$('#btnAddPhoto'),
+      selPrevConf:$('#selPrevConf'),selPrevVendor:$('#selPrevVendor'),btnLoadPrev:$('#btnLoadPrev'),prevList:$('#prevList'),
+      status:$('#status'),
+      dlgApi:$('#dlgApi'),apiBase:$('#apiBase'),apiKey:$('#apiKey'),btnApiSave:$('#btnApiSave'),btnApiTest:$('#btnApiTest'),
+      dlgLogs:$('#dlgLogs'),logsView:$('#logsView'),btnLogCompact:$('#btnLogCompact'),btnLogVerbose:$('#btnLogVerbose'),btnLogCopy:$('#btnLogCopy'),
+      dlgSelfTest:$('#dlgSelfTest'),btnRunTests:$('#btnRunTests'),
+      dlgNewConf:$('#dlgNewConf'),newConfName:$('#newConfName'),newConfStart:$('#newConfStart'),newConfEnd:$('#newConfEnd'),btnCreateConf:$('#btnCreateConf'),
+      dlgNewVendor:$('#dlgNewVendor'),newVendorName:$('#newVendorName'),newVendorConf:$('#newVendorConf'),btnCreateVendor:$('#btnCreateVendor'),
+      btnExportTxt:$('#btnExportTxt'),btnExportJson:$('#btnExportJson')
+    };
 
-      const el = {
-        btnOpenApi: $('#btnOpenApi'),
-        btnOpenLogs: $('#btnOpenLogs'),
-        btnSelfTest: $('#btnSelfTest'),
-        connBadge: $('#connBadge'),
-        selConference: $('#selConference'),
-        selVendor: $('#selVendor'),
-        btnNewConf: $('#btnNewConf'),
-        btnNewVendor: $('#btnNewVendor'),
-        btnStart: $('#btnStart'),
-        btnStop: $('#btnStop'),
-        btnPrev: $('#btnPrev'),
-        badgeAudio: $('#badgeAudio'),
-        badgeImages: $('#badgeImages'),
-        badgeSession: $('#badgeSession'),
-        txtNotes: $('#txtNotes'),
-        imgGrid: $('#imgGrid'),
-        filePhotos: $('#filePhotos'),
-        btnAddPhoto: $('#btnAddPhoto'),
-        selPrevConf: $('#selPrevConf'),
-        selPrevVendor: $('#selPrevVendor'),
-        btnLoadPrev: $('#btnLoadPrev'),
-        status: $('#status'),
-        // dialogs
-        dlgApi: $('#dlgApi'),
-        apiBase: $('#apiBase'),
-        apiKey: $('#apiKey'),
-        btnApiSave: $('#btnApiSave'),
-        btnApiTest: $('#btnApiTest'),
-        dlgLogs: $('#dlgLogs'),
-        logsView: $('#logsView'),
-        btnLogCompact: $('#btnLogCompact'),
-        btnLogVerbose: $('#btnLogVerbose'),
-        btnLogCopy: $('#btnLogCopy'),
-        btnExportTxt: $('#btnExportTxt'),
-        btnExportJson: $('#btnExportJson'),
-        btnExportTxt2: $('#btnExportTxt2'),
-        btnExportJson2: $('#btnExportJson2'),
-        dlgSelfTest: $('#dlgSelfTest'),
-        chkMultipart: $('#chkMultipart'),
-        btnRunTests: $('#btnRunTests'),
-        dlgNewConf: $('#dlgNewConf'),
-        newConfName: $('#newConfName'),
-        newConfStart: $('#newConfStart'),
-        newConfEnd: $('#newConfEnd'),
-        btnCreateConf: $('#btnCreateConf'),
-        dlgNewVendor: $('#dlgNewVendor'),
-        newVendorName: $('#newVendorName'),
-        newVendorConf: $('#newVendorConf'),
-        btnCreateVendor: $('#btnCreateVendor'),
-        prevList: $('#prevList'),
-      };
+    // ---- State ----
+    const state={media:null,recorder:null,chunks:[],images:[],sessionStart:null,confs:[],vendors:[]};
 
-      // ---------- App state ----------
-      const state = {
-        media: null, recorder: null, chunks: [],
-        images: [],
-        sessionStart: null,
-        currentSessionId: null,
-        confs: [], vendors: [],
-      };
+    // ---- Helpers ----
+    const safe=(v)=>v==null?'':String(v);
+    const setBadge=(id,t)=>el[id].textContent=t;
+    const status=(t)=>el.status.textContent=t;
+    const bytes=(b)=>!b?'0 MB':(b/1024/1024).toFixed(2)+' MB';
 
-      // ---------- Helpers ----------
-      function setBadge(id, text){ el[id].textContent=text; }
-      function status(msg){ el.status.textContent = msg; }
-      function safeStr(v){ return (v==null?'':String(v)); }
-      function fmtBytes(b){ if(!b) return '0 MB'; const mb=(b/1024/1024).toFixed(2); return `${mb} MB`; }
+    function renderLogs(verbose=false){
+      el.logsView.textContent = logs.map(x=> verbose? JSON.stringify(x,null,2) : JSON.stringify(x)).join('\n') || '(empty)';
+    }
+    listeners.log=()=>renderLogs(false);
+    function download(name,text,mime='text/plain'){ const blob=new Blob([text],{type:mime}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),500); }
 
-      function renderLogs(verbose=false){
-        const out = logs.map(x => verbose ? JSON.stringify(x, null, 2) : JSON.stringify(x)).join('\n');
-        el.logsView.textContent = out || '(empty)';
+    function applyConfigToBadges(){
+      const cfg=CB.config.get();
+      el.connBadge.textContent = cfg.base ? 'Connected' : 'Disconnected';
+      el.connBadge.classList.toggle('muted', !cfg.base);
+    }
+
+    async function loadInitial(){
+      try{
+        const cfg=CB.config.get(); if(!cfg.base){ status('API base not set. Open API.'); log('error','Could not load initial data: API base URL not configured.'); return; }
+        const confs=await CB.listConfs(); state.confs=Array.isArray(confs?.data)?confs.data:[];
+        const confOpts=['<option value="">(Any / Unknown)</option>'].concat(state.confs.map(c=>`<option value="${c.id}">${safe(c.name)}</option>`));
+        el.selConference.innerHTML=confOpts.join(''); el.selPrevConf.innerHTML=confOpts.join('');
+        const vendors=await CB.listVendors().catch(()=>({data:[]}));
+        state.vendors=Array.isArray(vendors?.data)?vendors.data:[];
+        const vOpts=['<option value="">(Any / Unknown)</option>'].concat(state.vendors.map(v=>`<option value="${v.id}">${safe(v.name)}</option>`));
+        el.selVendor.innerHTML=vOpts.join(''); el.selPrevVendor.innerHTML=vOpts.join('');
+        log('info','Dropdowns populated from API.');
+        status('Ready.');
+      }catch(err){ log('error','Could not load initial data: '+(err.message||err)); status('Failed to load initial data.'); }
+    }
+
+    async function ensureUnknownsIfNeeded(){
+      let confId=el.selConference.value||''; let vendorId=el.selVendor.value||'';
+      if (!confId){
+        const name='Unknown Conference'; const found=state.confs.find(c=>(c.name||'').toLowerCase()===name.toLowerCase());
+        if (found) confId=found.id; else {
+          const d=new Date().toISOString().slice(0,10);
+          const created=await CB.createConf({name,start_date:d,end_date:d}); confId=created?.data?.id||created?.id;
+        }
       }
-      listeners['log'] = ()=>renderLogs(false);
-
-      function download(name, text, mime='text/plain'){
-        const blob = new Blob([text], {type:mime});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = name;
-        a.click();
-        setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+      if (!vendorId){
+        const vname='Unknown Vendor';
+        let scoped=[]; try{ const res=await CB.listVendorsByConf(confId); scoped=Array.isArray(res?.data)?res.data:[]; }catch{}
+        const found=scoped.find(v=>(v.name||'').toLowerCase()===vname.toLowerCase());
+        if (found) vendorId=found.id; else {
+          const created=await CB.createVendor({name:vname,conference_id:confId}); vendorId=created?.data?.id||created?.id;
+        }
       }
+      return {confId,vendorId};
+    }
 
-      function apiConfigFromUI(){
-        const mode = [...document.querySelectorAll('input[name="authmode"]')].find(r=>r.checked)?.value || 'xapikey';
-        return {
-          base: el.apiBase.value.trim(),
-          key: el.apiKey.value.trim(),
-          mode,
-          qn: $('#apiQueryName').value.trim() || 'apiKey'
+    function addThumb(file){
+      const idx=state.images.length; state.images.push(file);
+      const wrap=document.createElement('div'); wrap.className='thumb';
+      const img=document.createElement('img'); const r=new FileReader(); r.onload=e=>img.src=e.target.result; r.readAsDataURL(file);
+      const rm=document.createElement('button'); rm.className='btn ghost'; rm.textContent='×';
+      rm.onclick=e=>{ e.preventDefault(); state.images.splice(idx,1); wrap.remove(); setBadge('badgeImages',`Images: ${state.images.length}`); };
+      wrap.appendChild(img); wrap.appendChild(rm); el.imgGrid.appendChild(wrap);
+      setBadge('badgeImages',`Images: ${state.images.length}`);
+    }
+
+    async function startRecording(){
+      try{
+        if (state.recorder) return;
+        state.media=await navigator.mediaDevices.getUserMedia({audio:true});
+        state.chunks=[]; state.recorder=new MediaRecorder(state.media,{mimeType:'audio/webm'});
+        state.recorder.ondataavailable=e=>{ if (e.data && e.data.size>0) state.chunks.push(e.data); };
+        state.recorder.start(); state.sessionStart=new Date();
+        setBadge('badgeAudio','Audio: recording…'); log('info','Audio recording started.');
+      }catch(err){ log('error','Could not start audio: '+(err.message||err)); status('Microphone permission failed.'); }
+    }
+
+    function blobToB64(blob){ return new Promise((resolve,reject)=>{ const r=new FileReader(); r.onload=()=>resolve(String(r.result).split(',')[1]); r.onerror=reject; r.readAsDataURL(blob); }); }
+    const fileToB64 = (f)=>blobToB64(f);
+
+    async function stopAndUpload(){
+      try{
+        if (!state.recorder){ status('No active recording.'); return; }
+        log('info','Stopping recorder…');
+        await new Promise(res=>{ state.recorder.onstop=res; state.recorder.stop(); });
+        const blob=new Blob(state.chunks,{type:'audio/webm'});
+        setBadge('badgeAudio',`Audio: ${bytes(blob.size)}`); log('info',`Audio captured: ${bytes(blob.size)}`);
+
+        const {confId,vendorId}=await ensureUnknownsIfNeeded();
+        const startISO = state.sessionStart? state.sessionStart.toISOString() : new Date().toISOString();
+        const endISO   = new Date().toISOString();
+        const dur      = state.sessionStart? Math.max(1,Math.round((Date.now()-state.sessionStart.getTime())/1000)) : 1;
+
+        const payload = {
+          conference_id: confId,
+          vendor_id: vendorId,
+          start_time: startISO,
+          end_time: endISO,
+          duration_seconds: dur,
+          user_notes: el.txtNotes.value || '',
+          audio_base64: await blobToB64(blob),
+          images_base64: await Promise.all(state.images.map(fileToB64))
         };
+
+        // JSON-only, sanitized at CB.uploadSessionJson level as well
+        await CB.uploadSessionJson(payload);
+        log('info','Upload (JSON) complete.');
+        status('Upload complete (JSON).');
+
+        // Reset
+        state.images=[]; el.imgGrid.innerHTML=''; setBadge('badgeImages','Images: 0');
+        state.recorder=null; state.media?.getTracks().forEach(t=>t.stop()); state.media=null; state.chunks=[];
+      }catch(err){
+        log('error','Upload failed: '+(err.message||err)); status('Upload failed.');
+        // cleanup recorder
+        state.recorder=null; state.media?.getTracks().forEach(t=>t.stop()); state.media=null; state.chunks=[];
       }
+    }
 
-      function applyConfigToBadges(){
-        const cfg = CB.config.get();
-        el.connBadge.textContent = cfg.base ? 'Connected' : 'Disconnected';
-        el.connBadge.classList.toggle('muted', !cfg.base);
-      }
-
-      async function loadInitial(){
-        try{
-          const cfg = CB.config.get();
-          if (!cfg.base){ status('API base not set. Open API panel.'); log('error','Could not load initial data: API base URL not configured.'); return; }
-          // Conferences
-          const confs = await CB.listConfs();
-          state.confs = Array.isArray(confs?.data) ? confs.data : [];
-          // Populate selects
-          const confOpts = ['<option value="">(Any / Unknown)</option>']
-            .concat(state.confs.map(c=>`<option value="${c.id}">${safeStr(c.name)}</option>`));
-          el.selConference.innerHTML = confOpts.join('');
-          el.selPrevConf.innerHTML = confOpts.join('');
-          // Vendors (global as fallback)
-          const vendorsRes = await CB.listVendors().catch(()=>({data:[]}));
-          state.vendors = Array.isArray(vendorsRes?.data) ? vendorsRes.data : [];
-          const vOpts = ['<option value="">(Any / Unknown)</option>']
-            .concat(state.vendors.map(v=>`<option value="${v.id}">${safeStr(v.name)}</option>`));
-          el.selVendor.innerHTML = vOpts.join('');
-          el.selPrevVendor.innerHTML = vOpts.join('');
-          log('info','Dropdowns populated from API.');
-          status('Ready.');
-        }catch(err){
-          log('error','Could not load initial data: '+(err?.message||String(err)));
-          status('Failed to load initial data.');
-        }
-      }
-
-      async function ensureUnknownsIfNeeded(){
-        // Creates “Unknown Conference/Vendor” if user didn’t pick one.
-        let confId = el.selConference.value || '';
-        let vendorId = el.selVendor.value || '';
-        if (!confId){
-          const name = 'Unknown Conference';
-          // Is there one already?
-          const found = state.confs.find(c=> (c.name||'').toLowerCase()===name.toLowerCase());
-          if (found) confId = found.id;
-          else {
-            const today = new Date().toISOString().slice(0,10);
-            const created = await CB.createConf({ name, start_date: today, end_date: today });
-            confId = created?.data?.id || created?.id || created?.data?.[0]?.id;
-          }
-        }
-        if (!vendorId){
-          const vname = 'Unknown Vendor';
-          // fetch vendors scoped to conf
-          let scoped = [];
-          try {
-            const res = await CB.listVendorsByConf(confId);
-            scoped = Array.isArray(res?.data) ? res.data : [];
-          }catch{}
-          let foundV = scoped.find(v=> (v.name||'').toLowerCase()===vname.toLowerCase());
-          if (foundV) vendorId = foundV.id;
-          else {
-            const created = await CB.createVendor({ name: vname, conference_id: confId });
-            vendorId = created?.data?.id || created?.id || created?.data?.[0]?.id;
-          }
-        }
-        return {confId, vendorId};
-      }
-
-      function addThumb(file){
-        const idx = state.images.length;
-        state.images.push(file);
-        const wrap = document.createElement('div'); wrap.className='thumb';
-        const img = document.createElement('img'); img.alt='photo';
-        const reader = new FileReader();
-        reader.onload = e => img.src = e.target.result;
-        reader.readAsDataURL(file);
-        const rm = document.createElement('button'); rm.className='btn ghost'; rm.textContent='×';
-        rm.onclick = (ev)=>{ ev.preventDefault(); state.images.splice(idx,1); wrap.remove(); setBadge('badgeImages',`Images: ${state.images.length}`); };
-        wrap.appendChild(img); wrap.appendChild(rm);
-        el.imgGrid.appendChild(wrap);
-        setBadge('badgeImages',`Images: ${state.images.length}`);
-      }
-
-      // ---------- Audio handling ----------
-      async function startRecording(){
-        try{
-          if (state.recorder) return;
-          state.media = await navigator.mediaDevices.getUserMedia({audio:true});
-          state.chunks = [];
-          state.recorder = new MediaRecorder(state.media, {mimeType:'audio/webm'});
-          state.recorder.ondataavailable = e => { if (e.data && e.data.size>0) state.chunks.push(e.data); };
-          state.recorder.start();
-          state.sessionStart = new Date();
-          setBadge('badgeAudio','Audio: recording…');
-          log('info','Audio recording started.');
-          status('Session started. Recording in progress.');
-        }catch(err){
-          log('error','Could not start audio: '+(err.message||err));
-          status('Microphone permission failed.');
-        }
-      }
-
-      async function stopAndUpload(){
-        try{
-          if (!state.recorder){ status('No active recording.'); return; }
-          log('info','Stopping recorder…');
-          await new Promise(res=>{
-            state.recorder.onstop = res;
-            state.recorder.stop();
-          });
-          const blob = new Blob(state.chunks, {type:'audio/webm'});
-          setBadge('badgeAudio',`Audio: ${fmtBytes(blob.size)}`);
-          log('info',`Audio captured: ${fmtBytes(blob.size)}`);
-
-          // Ensure conference/vendor
-          const ids = await ensureUnknownsIfNeeded();
-
-          // Construct upload payload (JSON first; NEVER send "notes")
-          const payloadJson = {
-            conference_id: ids.confId || null,
-            vendor_id: ids.vendorId || null,
-            start_time: state.sessionStart ? state.sessionStart.toISOString() : new Date().toISOString(),
-            end_time: new Date().toISOString(),
-            duration_seconds: state.sessionStart ? Math.max(1, Math.round((Date.now()-state.sessionStart.getTime())/1000)) : undefined,
-            user_notes: el.txtNotes.value || '',             // ← correct field
-            files_uploaded: [],                              // optional
-            // Embed audio base64 for JSON mode (keeps Content-Type application/json)
-            audio_base64: await blobToB64(blob),             // field name for server-side convenience
-            images_base64: await Promise.all(state.images.map(f=>fileToB64(f)))
-          };
-
-          // Try JSON upload
-          try{
-            await CB.uploadSessionJson(payloadJson);
-            log('info','Upload (JSON) complete.');
-            status('Upload complete (JSON). Enrichment should trigger server-side.');
-            state.currentSessionId = '—';
-            setBadge('badgeSession','Session ID: —');
-          }catch(errJson){
-            log('warn',`JSON upload failed: ${errJson.message||errJson}. Falling back to multipart…`);
-            // Fallback multipart (optional)
-            const fdPayload = {
-              conference_id: payloadJson.conference_id || '',
-              vendor_id: payloadJson.vendor_id || '',
-              start_time: payloadJson.start_time,
-              end_time: payloadJson.end_time,
-              duration_seconds: String(payloadJson.duration_seconds || ''),
-              user_notes: payloadJson.user_notes,                 // ← correct field
-              files: [ new File([blob], `rec_${Date.now()}.webm`, {type:'audio/webm'}) ],
-            };
-            state.images.forEach((f)=>fdPayload.files.push(f));
-            await CB.uploadSessionMultipart(fdPayload);
-            log('info','Upload (multipart) complete.');
-            status('Upload complete (multipart).');
-          }
-
-          // Reset images for next session
-          state.images = [];
-          el.imgGrid.innerHTML = '';
-          setBadge('badgeImages','Images: 0');
-        }catch(err){
-          log('error','Upload failed: '+(err.message||err));
-          status('Upload failed.');
-        }finally{
-          // Cleanup audio
-          if (state.media){ state.media.getTracks().forEach(t=>t.stop()); }
-          state.recorder = null; state.media = null; state.chunks = [];
-        }
-      }
-
-      function blobToB64(blob){
-        return new Promise((resolve,reject)=>{
-          const r = new FileReader();
-          r.onload = ()=>resolve(String(r.result).split(',')[1]);
-          r.onerror = reject;
-          r.readAsDataURL(blob);
+    async function runSelfTest(){
+      const out=[]; const p=s=>{ out.push(s); $('#testsView').textContent=out.join('\n'); };
+      try{
+        p('GET /health'); await CB.health(); p('✓ health');
+        p('GET /conferences'); const confs=await CB.listConfs(); p(`✓ conferences (${confs?.count ?? (confs?.data||[]).length})`);
+        const d=new Date().toISOString().slice(0,10);
+        let confId=(confs?.data||[]).find(c=>(c.name||'').toLowerCase()==='unknown conference')?.id;
+        if(!confId){ p('POST /conferences (Unknown Conference)'); confId=(await CB.createConf({name:'Unknown Conference',start_date:d,end_date:d}))?.data?.id; }
+        let vendors=await CB.listVendorsByConf(confId).catch(()=>({data:[]}));
+        let vendorId=(vendors?.data||[]).find(v=>(v.name||'').toLowerCase()==='unknown vendor')?.id;
+        if(!vendorId){ p('POST /vendors (Unknown Vendor)'); vendorId=(await CB.createVendor({name:'Unknown Vendor',conference_id:confId}))?.data?.id; }
+        p('POST /sessions/upload (JSON, user_notes)'); await CB.uploadSessionJson({
+          conference_id: confId, vendor_id: vendorId,
+          start_time: new Date().toISOString(), end_time: new Date(Date.now()+1000).toISOString(),
+          duration_seconds: 1, user_notes: 'Self-test', audio_base64: '', images_base64: []
         });
-      }
-      function fileToB64(file){ return blobToB64(file); }
+        p('✓ Upload JSON accepted (no "notes").'); p('DONE.');
+      }catch(err){ p('✖ Self-Test failed: '+(err.message||err)); }
+    }
 
-      // ---------- Self-test ----------
-      async function runSelfTest(){
-        const out = [];
-        const p = s=>{ out.push(s); el.testsView.textContent = out.join('\n'); };
-        try{
-          p('OPTIONS /conferences');
-          // Not all servers support OPTIONS; we’ll just attempt GET health next.
-          p('GET /health'); await CB.health(); p('✓ /health');
-          p('GET /conferences'); const confs = await CB.listConfs(); p(`✓ /conferences (${confs?.count ?? confs?.data?.length ?? '?'})`);
-          const today = new Date().toISOString().slice(0,10);
-          p('POST /conferences (unknown if missing)');
-          // Create “Unknown Conference” if not exists
-          const existing = (confs?.data||[]).find(c=>(c.name||'').toLowerCase()==='unknown conference');
-          const confId = existing?.id || (await CB.createConf({name:'Unknown Conference', start_date:today, end_date:today}))?.data?.id;
-          p('GET /vendors (fallback)'); const vendors = await CB.listVendors();
-          let vendorId = (vendors?.data||[]).find(v=>(v.name||'').toLowerCase()==='unknown vendor' && v.conference_id===confId)?.id;
-          if (!vendorId){ p('POST /vendors (Unknown Vendor)'); vendorId = (await CB.createVendor({name:'Unknown Vendor', conference_id: confId}))?.data?.id; }
-          p('POST /sessions/upload (JSON, user_notes only)');
-          await CB.uploadSessionJson({
-            conference_id: confId, vendor_id: vendorId,
-            start_time: new Date().toISOString(),
-            end_time: new Date(Date.now()+1000).toISOString(),
-            duration_seconds: 1,
-            user_notes: 'Self-test',
-            audio_base64: '', images_base64: []
-          });
-          p('✓ Upload JSON accepted (no "notes" field).');
-          p('DONE.');
-        }catch(err){
-          p('✖ Self-Test failed: '+(err.message||err));
-        }
-      }
-
-      // ---------- Event bindings ----------
-      function bindUIOnce(){
-        if (bindUIOnce.done) return; bindUIOnce.done=true;
-
-        on(el.btnOpenApi, 'click', (e)=>{ e.preventDefault(); el.dlgApi.showModal(); });
-        on(el.btnOpenLogs,'click', (e)=>{ e.preventDefault(); el.dlgLogs.showModal(); renderLogs(false); });
-        on(el.btnSelfTest,'click',(e)=>{ e.preventDefault(); el.dlgSelfTest.showModal(); });
-
-        on(el.btnApiSave,'click',(e)=>{
-          e.preventDefault();
-          const cfg = apiConfigFromUI();
-          CB.config.set(cfg.base, cfg.key, cfg.mode, cfg.qn);
-          log('info','Config updated.');
-          applyConfigToBadges();
-          loadInitial();
-        });
-        on(el.btnApiTest,'click', async (e)=>{
-          e.preventDefault();
-          try{ await CB.health(); status('Health OK'); }catch(err){ status('Health failed: '+(err.message||err)); }
-        });
-
-        on(el.btnNewConf,'click',(e)=>{ e.preventDefault(); // open dialog
-          // seed dates
-          const d = new Date().toISOString().slice(0,10);
-          el.newConfStart.value = d; el.newConfEnd.value = d;
-          el.dlgNewConf.showModal();
-        });
-        on(el.btnCreateConf,'click', async (e)=>{
-          e.preventDefault();
-          try{
-            const name = el.newConfName.value.trim(); const s=el.newConfStart.value; const ed=el.newConfEnd.value;
-            if (!name || !s || !ed) { status('Name/start/end required.'); return; }
-            const created = await CB.createConf({name, start_date:s, end_date:ed});
-            log('info','Conference created: '+JSON.stringify(created));
-            el.dlgNewConf.close();
-            loadInitial();
-          }catch(err){ log('error','Create conference failed: '+(err.message||err)); }
-        });
-
-        on(el.btnNewVendor,'click', (e)=>{ e.preventDefault();
-          el.newVendorConf.innerHTML = (state.confs||[]).map(c=>`<option value="${c.id}">${safeStr(c.name)}</option>`).join('');
-          el.dlgNewVendor.showModal();
-        });
-        on(el.btnCreateVendor,'click', async (e)=>{
-          e.preventDefault();
-          try{
-            const name = el.newVendorName.value.trim();
-            const confId = el.newVendorConf.value;
-            if (!name || !confId){ status('Vendor name & conference required.'); return; }
-            const created = await CB.createVendor({name, conference_id: confId});
-            log('info','Vendor created: '+JSON.stringify(created));
-            el.dlgNewVendor.close();
-            loadInitial();
-          }catch(err){ log('error','Create vendor failed: '+(err.message||err)); }
-        });
-
-        on(el.selConference,'change', async ()=>{
-          // refresh vendors for selected conference
-          const id = el.selConference.value;
-          if (!id){ // repopulate with global
-            const vOpts = ['<option value="">(Any / Unknown)</option>']
-              .concat((state.vendors||[]).map(v=>`<option value="${v.id}">${safeStr(v.name)}</option>`));
-            el.selVendor.innerHTML = vOpts.join(''); return;
-          }
-          try{
-            const res = await CB.listVendorsByConf(id);
-            const vendors = Array.isArray(res?.data) ? res.data : [];
-            const vOpts = ['<option value="">(Any / Unknown)</option>']
-              .concat(vendors.map(v=>`<option value="${v.id}">${safeStr(v.name)}</option>`));
-            el.selVendor.innerHTML = vOpts.join('');
-          }catch{ /* ignore */ }
-        });
-
-        on(el.btnAddPhoto,'click',(e)=>{ e.preventDefault(); el.filePhotos.click(); });
-        on(el.filePhotos,'change',(e)=>{
-          const files = Array.from(e.target.files||[]);
-          files.forEach(addThumb);
-          e.target.value=''; // reset
-        });
-
-        on(el.btnStart,'click', async (e)=>{ e.preventDefault(); await startRecording(); });
-        on(el.btnStop,'click', async (e)=>{ e.preventDefault(); await stopAndUpload(); });
-        on(el.btnPrev,'click',(e)=>{ e.preventDefault(); window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'}); });
-
-        on(el.btnLoadPrev,'click', async (e)=>{
-          e.preventDefault();
-          el.prevList.innerHTML = '<div class="hint">Loading…</div>';
-          try{
-            const vid = el.selPrevVendor.value;
-            if (!vid){ el.prevList.innerHTML = '<div class="hint">Pick a vendor first.</div>'; return; }
-            const detail = await CB.vendorsGet(vid);
-            const sessions = Array.isArray(detail?.data?.sessions) ? detail.data.sessions : [];
-            el.prevList.innerHTML = sessions.slice(0,20).map(s=>(
-              `<div class="card">
-                <div><strong>${safeStr(s.session_type||'session')}</strong> — ${safeStr(s.status||'')}</div>
-                <div class="hint">${safeStr(s.start_time||'')} → ${safeStr(s.end_time||'')}</div>
-                <div class="hint">Duration: ${safeStr(s.duration_seconds||'')}</div>
-                <div class="field"><label>User notes</label><div class="logs">${safeStr(s.user_notes||'')}</div></div>
-                ${(Array.isArray(s.files_uploaded)&&s.files_uploaded.length)?`<div class="field"><label>Files</label><div class="list">${s.files_uploaded.map(f=>`<a href="${f.url}" target="_blank">${f.filename||'file'}</a>`).join('<br>')}</div></div>`:''}
-                ${(Array.isArray(s.photo_urls)&&s.photo_urls.length)?`<div class="imgGrid">${s.photo_urls.slice(0,6).map(u=>`<div class="thumb"><img src="${u}"></div>`).join('')}</div>`:''}
-              </div>`
-            )).join('') || '<div class="hint">No sessions yet.</div>';
-          }catch(err){
-            el.prevList.innerHTML = `<div class="hint">Failed to load: ${safeStr(err.message||err)}</div>`;
-          }
-        });
-
-        // Logs controls
-        on(el.btnOpenLogs,'click', ()=>renderLogs(false));
-        on(el.btnLogCompact,'click',(e)=>{ e.preventDefault(); renderLogs(false); });
-        on(el.btnLogVerbose,'click',(e)=>{ e.preventDefault(); renderLogs(true); });
-        on(el.btnLogCopy,'click',(e)=>{ e.preventDefault(); navigator.clipboard.writeText(el.logsView.textContent||''); });
-
-        // Exports
-        function exportTxt(){ download('cb-logs.txt', logs.map(l=>JSON.stringify(l)).join('\n')); }
-        function exportJson(){ download('cb-logs.json', JSON.stringify(logs, null, 2), 'application/json'); }
-        on(el.btnExportTxt,'click',(e)=>{ e.preventDefault(); exportTxt(); });
-        on(el.btnExportJson,'click',(e)=>{ e.preventDefault(); exportJson(); });
-        on(el.btnExportTxt2,'click',(e)=>{ e.preventDefault(); exportTxt(); });
-        on(el.btnExportJson2,'click',(e)=>{ e.preventDefault(); exportJson(); });
-
-        // Self test
-        on(el.btnRunTests,'click', async (e)=>{ e.preventDefault(); await runSelfTest(); });
-      }
-
-      // ---------- Boot ----------
-      document.addEventListener('DOMContentLoaded', ()=>{
-        bindUIOnce();
-        // Seed API settings
-        const cfg = CB.config.get();
-        el.apiBase.value = cfg.base;
-        el.apiKey.value = cfg.key;
-        applyConfigToBadges();
-        // Initial data
-        loadInitial();
+    // ---- Bindings ----
+    function bind(){
+      on(el.btnOpenApi,'click',e=>{e.preventDefault(); el.dlgApi.showModal();});
+      on(el.btnOpenLogs,'click',e=>{e.preventDefault(); el.dlgLogs.showModal(); renderLogs(false);});
+      on(el.btnSelfTest,'click',e=>{e.preventDefault(); el.dlgSelfTest.showModal();});
+      on(el.btnApiSave,'click',e=>{e.preventDefault();
+        const mode=[...document.querySelectorAll('input[name="authmode"]')].find(r=>r.checked)?.value||'xapikey';
+        CB.config.set(el.apiBase.value.trim(), el.apiKey.value.trim(), mode, $('#apiQueryName').value.trim()||'apiKey');
+        log('info','Config updated.'); applyConfigToBadges(); loadInitial();
       });
-    })();
+      on(el.btnApiTest,'click',async e=>{e.preventDefault(); try{await CB.health(); status('Health OK');}catch(err){status('Health failed: '+(err.message||err));}});
+      on(el.btnNewConf,'click',e=>{e.preventDefault(); const d=new Date().toISOString().slice(0,10); el.newConfStart.value=d; el.newConfEnd.value=d; el.dlgNewConf.showModal();});
+      on(el.btnCreateConf,'click',async e=>{e.preventDefault(); try{
+        const n=el.newConfName.value.trim(), s=el.newConfStart.value, ed=el.newConfEnd.value;
+        if(!n||!s||!ed){status('Name/start/end required.');return;}
+        const created=await CB.createConf({name:n,start_date:s,end_date:ed}); log('info','Conference created: '+JSON.stringify(created)); el.dlgNewConf.close(); loadInitial();
+      }catch(err){log('error','Create conference failed: '+(err.message||err));}});
+      on(el.btnNewVendor,'click',e=>{e.preventDefault();
+        el.newVendorConf.innerHTML=(state.confs||[]).map(c=>`<option value="${c.id}">${safe(c.name)}</option>`).join('');
+        el.dlgNewVendor.showModal();
+      });
+      on(el.btnCreateVendor,'click',async e=>{e.preventDefault(); try{
+        const n=el.newVendorName.value.trim(), cid=el.newVendorConf.value; if(!n||!cid){status('Vendor name & conference required.');return;}
+        const created=await CB.createVendor({name:n,conference_id:cid}); log('info','Vendor created: '+JSON.stringify(created)); el.dlgNewVendor.close(); loadInitial();
+      }catch(err){log('error','Create vendor failed: '+(err.message||err));}});
+      on(el.selConference,'change',async ()=>{
+        const id=el.selConference.value; if(!id){
+          const vOpts=['<option value="">(Any / Unknown)</option>'].concat((state.vendors||[]).map(v=>`<option value="${v.id}">${safe(v.name)}</option>`));
+          el.selVendor.innerHTML=vOpts.join(''); return;
+        }
+        try{ const res=await CB.listVendorsByConf(id); const vs=Array.isArray(res?.data)?res.data:[]; const vOpts=['<option value="">(Any / Unknown)</option>'].concat(vs.map(v=>`<option value="${v.id}">${safe(v.name)}</option>`)); el.selVendor.innerHTML=vOpts.join(''); }catch{}
+      });
+      on(el.btnAddPhoto,'click',e=>{e.preventDefault(); el.filePhotos.click();});
+      on(el.filePhotos,'change',e=>{ Array.from(e.target.files||[]).forEach(addThumb); e.target.value=''; });
+      on(el.btnStart,'click',async e=>{e.preventDefault(); await startRecording();});
+      on(el.btnStop,'click',async e=>{e.preventDefault(); await stopAndUpload();});
+      on(el.btnPrev,'click',e=>{e.preventDefault(); window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});});
+      on(el.btnLoadPrev,'click',async e=>{e.preventDefault();
+        el.prevList.innerHTML='<div class="hint">Loading…</div>';
+        try{
+          const vid=el.selPrevVendor.value; if(!vid){el.prevList.innerHTML='<div class="hint">Pick a vendor first.</div>'; return;}
+          const d=await CB.vendorsGet(vid); const sessions=Array.isArray(d?.data?.sessions)?d.data.sessions:[];
+          el.prevList.innerHTML=sessions.slice(0,20).map(s=>`
+            <div class="card">
+              <div><strong>${safe(s.session_type||'session')}</strong> — ${safe(s.status||'')}</div>
+              <div class="hint">${safe(s.start_time||'')} → ${safe(s.end_time||'')}</div>
+              <div class="hint">Duration: ${safe(s.duration_seconds||'')}</div>
+              <div class="field"><label>User notes</label><div class="logs">${safe(s.user_notes||'')}</div></div>
+              ${(Array.isArray(s.files_uploaded)&&s.files_uploaded.length)?`<div class="field"><label>Files</label><div class="stack">${s.files_uploaded.map(f=>`<a href="${f.url}" target="_blank">${safe(f.filename||'file')}</a>`).join('')}</div></div>`:''}
+              ${(Array.isArray(s.photo_urls)&&s.photo_urls.length)?`<div class="imgGrid">${s.photo_urls.slice(0,6).map(u=>`<div class="thumb"><img src="${u}"></div>`).join('')}</div>`:''}
+            </div>`).join('') || '<div class="hint">No sessions yet.</div>';
+        }catch(err){ el.prevList.innerHTML='<div class="hint">Failed to load: '+safe(err.message||err)+'</div>'; }
+      });
+      on(el.btnOpenLogs,'click',()=>renderLogs(false));
+      on(el.btnLogCompact,'click',e=>{e.preventDefault(); renderLogs(false);});
+      on(el.btnLogVerbose,'click',e=>{e.preventDefault(); renderLogs(true);});
+      on(el.btnLogCopy,'click',e=>{e.preventDefault(); navigator.clipboard.writeText(el.logsView.textContent||'');});
+      on(el.btnExportTxt,'click',e=>{e.preventDefault(); download('cb-logs.txt', logs.map(l=>JSON.stringify(l)).join('\n'));});
+      on(el.btnExportJson,'click',e=>{e.preventDefault(); download('cb-logs.json', JSON.stringify(logs,null,2),'application/json');});
+      on(el.btnRunTests,'click',async e=>{e.preventDefault(); await runSelfTest();});
+    }
+
+    document.addEventListener('DOMContentLoaded',()=>{
+      bind();
+      // seed cfg UI
+      const cfg=CB.config.get(); el.apiBase.value=cfg.base; el.apiKey.value=cfg.key; applyConfigToBadges();
+      loadInitial();
+    });
+  })();
   </script>
 
-  <!-- Load your real API file last (optional). If present, it overrides the shim above. -->
+  <!-- Optional: your real API module (if present it will override the shim above) -->
   <script src="cb-api.js" defer></script>
 </body>
   </html>
