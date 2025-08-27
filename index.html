@@ -341,8 +341,6 @@ const els = {
 const store = {
   get api(){ return JSON.parse(localStorage.getItem('cb_api') || 'null'); },
   set api(v){ localStorage.setItem('cb_api', JSON.stringify(v)); },
-  get unknown(){ return JSON.parse(localStorage.getItem('cb_unknown') || 'null'); },
-  set unknown(v){ localStorage.setItem('cb_unknown', JSON.stringify(v)); },
 };
 
 /* =================
@@ -427,7 +425,6 @@ async function apiFetch(path, opts={}){
     if(ct.includes('application/json')) return res.json();
     return res.blob();
   }catch(e){
-    // Upload fallback (multipart -> JSON) when server demands JSON
     if ((e?.status === 415 || (e?.status === 500 && String(e.body||'').includes('Unsupported Media Type'))) && opts.body instanceof FormData) {
       try {
         const asJson = await formDataToJsonPayload(opts.body);
@@ -495,9 +492,12 @@ async function formDataToJsonPayload(fd){
 /* =================
    Dropdowns
    ================= */
+function insertNoneOption(selectEl, label='— None —'){
+  const opt = document.createElement('option'); opt.value=''; opt.textContent=label; selectEl.appendChild(opt);
+}
 async function loadConferences(selectEl){
   const resp = await apiFetch('/conferences'); const list = asArray(resp);
-  selectEl.innerHTML = '';
+  selectEl.innerHTML = ''; insertNoneOption(selectEl);
   for(const c of list){
     const opt = document.createElement('option');
     opt.value = c.id ?? c._id ?? c.uuid ?? c.conferenceId;
@@ -506,7 +506,8 @@ async function loadConferences(selectEl){
   }
 }
 async function loadVendorsForConference(confId, selectEl){
-  selectEl.innerHTML = ''; if(!confId) return;
+  selectEl.innerHTML = ''; insertNoneOption(selectEl);
+  if(!confId) return;
   try{
     const resp = await apiFetch(`/conferences/${encodeURIComponent(confId)}/vendors`);
     const list = asArray(resp);
@@ -918,16 +919,11 @@ els.btnStop.addEventListener('click', async ()=>{
     const audioBlob = await stopRecordingGetBlob();
     if(!audioBlob) throw new Error('No audio captured.');
 
-    let conferenceId = els.confSelect.value || null;
-    let vendorId = els.vendorSelect.value || null;
-
-    // Ensure vendor exists for chosen/unknown conference
-    const ensured = await ensureConferenceVendor({ conferenceId, vendorId });
-    conferenceId = ensured.conferenceId; vendorId = ensured.vendorId;
-
+    // Let uploadSession handle Unknown conference/vendor creation
     const sessionId = await uploadSession({
       audioBlob, images: imageFiles, notes: els.notes.value,
-      conferenceId, vendorId
+      conferenceId: els.confSelect.value || null,
+      vendorId: els.vendorSelect.value || null
     });
     alert('Uploaded! Session ID: ' + sessionId + '\nEnrichment started.');
   }catch(e){ alert('Upload failed: ' + e.message); }
@@ -940,6 +936,12 @@ els.btnPrevious.addEventListener('click', async ()=>{
   await loadConferences(els.prevConf);
   if(els.prevConf.value) await loadVendorsForConference(els.prevConf.value, els.prevVendor);
   document.querySelectorAll('h2')[1]?.scrollIntoView({behavior:'smooth'});
+});
+els.prevConf.addEventListener('change', async ()=>{
+  await loadVendorsForConference(els.prevConf.value, els.prevVendor);
+});
+els.btnLoadSessions.addEventListener('click', async ()=>{
+  await loadPrevious(els.prevConf.value || null, els.prevVendor.value || null);
 });
 
 /* Closeable dialogs with Esc */
@@ -964,7 +966,7 @@ async function boot(){
       await loadConferences(els.prevConf);
       if(els.prevConf.value) await loadVendorsForConference(els.prevConf.value, els.prevVendor);
       log('Dropdowns populated from API.');
-      if(!els.confSelect.options.length) log('No conferences yet. You can record without selecting; we’ll use “Unknown Conference”.', 'warn');
+      if(!els.confSelect.options.length || !els.confSelect.value) log('No conference selected. You can record without selecting; we’ll use “Unknown Conference”.', 'warn');
     }catch(e){ log('Could not load initial data: ' + e.message, 'error'); }
   }else{
     setConnected(false);
@@ -974,4 +976,4 @@ async function boot(){
 boot();
 </script>
 </body>
-</html>
+  </html>
