@@ -238,7 +238,7 @@
 </div>
 
 <script>
-/* ========== Inlined API layer (stable) ========== */
+/* ========== Inlined API layer ========== */
 (function(global){
   'use strict';
   const logs=[]; const listeners=new Set();
@@ -275,8 +275,8 @@
   async function listConferences(){ const r=await req('GET','/conferences'); if(Array.isArray(r)) return r; if(r?.data&&Array.isArray(r.data)) return r.data; return []; }
   async function listVendorsForConference(confId){ const r=await req('GET',`/conferences/${encodeURIComponent(confId)}/vendors`); if(Array.isArray(r)) return r; if(r?.data&&Array.isArray(r.data)) return r.data; return []; }
   async function listAllVendors(){ const r=await req('GET','/vendors'); if(Array.isArray(r)) return r; if(r?.data&&Array.isArray(r.data)) return r.data; return []; }
-  async function createConference({name,start_date,end_date}){ const r=await req('POST','/conferences',{headers:{'Content-Type':'application/json'},body:JSON.stringify({name,start_date,end_date})}); return r?.data||r; }
-  async function createVendor({name,conference_id}){ const r=await req('POST','/vendors',{headers:{'Content-Type':'application/json'},body:JSON.stringify({name,conference_id})}); return r?.data||r; }
+  async function createConference({name,start_date,end_date}){ const r=await req('POST','/conferences',{headers:{'Content-Type':'application/json; charset=utf-8'},body:JSON.stringify({name,start_date,end_date})}); return r?.data||r; }
+  async function createVendor({name,conference_id}){ const r=await req('POST','/vendors',{headers:{'Content-Type':'application/json; charset=utf-8'},body:JSON.stringify({name,conference_id})}); return r?.data||r; }
   async function ensureConferenceVendor({conferenceId,vendorId,preferredVendorName='Unknown Vendor'}){
     if(!conferenceId){ const sd=todayISO(); const conf=await createConference({name:'Unknown Conference',start_date:sd,end_date:sd}); conferenceId=conf?.id??conf?._id??conf?.uuid; log(`Created fallback conference: ${conferenceId}`); }
     if(!vendorId){ const vendor=await createVendor({name:preferredVendorName||'Unknown Vendor',conference_id:conferenceId}); vendorId=vendor?.id??vendor?._id??vendor?.uuid; log(`Created fallback vendor: ${vendorId}`); }
@@ -286,48 +286,35 @@
   async function getSession(sessionId){ const r=await req('GET',`/sessions/${encodeURIComponent(sessionId)}`); return r?.data||r; }
   async function getSessionReport(sessionId){ const r=await req('GET',`/sessions/${encodeURIComponent(sessionId)}/report`); return r?.data||r; }
 
+  // ---- Upload (JSON only) ----
   async function uploadSession({audioBlob,images=[],text='',conferenceId,vendorId,startIso,endIso}){
     const path='/sessions/upload';
     const toB64=blob=>new Promise((resolve,reject)=>{ const r=new FileReader(); r.onloadend=()=>resolve(String(r.result).split(',')[1]||''); r.onerror=reject; r.readAsDataURL(blob); });
 
-    // 1) JSON (recommended)
-    try{
-      const audio_base64 = audioBlob ? await toB64(audioBlob) : '';
-      const images_base64 = []; for(const f of (images||[])) images_base64.push(await toB64(f));
-      const payload = {
-        conference_id: conferenceId||'',
-        vendor_id: vendorId||'',
-        start_time: startIso||new Date().toISOString(),
-        end_time: endIso||startIso||new Date().toISOString(),
-        session_type: 'conversation',
-        user_notes: text||'',
-        audio_base64, images_base64
-      };
-      const r=await req('POST',path,{headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      const sid=r?.data?.id||r?.id||r?.session_id||r?.sessionId;
-      try{ if(sid) await req('POST',`/sessions/${encodeURIComponent(sid)}/enrich`);}catch(e){ log('Enrich trigger failed (non-fatal): '+e.message,'warn'); }
-      return sid||'(unknown)';
-    }catch(e){ log(`JSON upload failed: ${e.message}. Falling back to multipart…`,'warn'); }
+    const audio_base64 = audioBlob ? await toB64(audioBlob) : '';
+    const images_base64 = []; for(const f of (images||[])) images_base64.push(await toB64(f));
 
-    // 2) Multipart (do not set Content-Type)
-    const form=new FormData();
-    form.append('conference_id',conferenceId||'');
-    form.append('vendor_id',vendorId||'');
-    form.append('start_time',startIso||new Date().toISOString());
-    form.append('end_time',endIso||startIso||new Date().toISOString());
-    form.append('session_type','conversation');
-    if(text) form.append('user_notes',text);
-    if(audioBlob){ const audioName=`audio.${(audioBlob?.type||'audio/webm').includes('mp4')?'mp4':'webm'}`; form.append('audio',audioBlob,audioName); }
-    (images||[]).forEach((f,i)=> form.append('images',f,f.name||`photo_${i+1}.jpg`));
+    const payload = {
+      conference_id: conferenceId||'',
+      vendor_id: vendorId||'',
+      start_time: startIso||new Date().toISOString(),
+      end_time: endIso||startIso||new Date().toISOString(),
+      session_type: 'conversation',
+      user_notes: text||'',
+      audio_base64, images_base64
+    };
+    // Defensive: ensure no 'notes' leaks in from anywhere
+    if ('notes' in payload) delete payload.notes;
 
-    const {headers,url}=authHeadersAndUrl(CFG.url.replace(/\/+$/,'')+path);
-    const id=Math.random().toString(36).slice(2,9);
-    log(`HTTP POST ${url}`,'info','→ request');
-    const res=await fetch(url,{method:'POST',headers,body:form,mode:'cors'});
-    const textRes=await res.text(); let data=textRes; try{ data=textRes?JSON.parse(textRes):null; }catch{}
-    log(`HTTP POST ${url}`,'info',`← ${res.status} ${(res.statusText||'')}`); log(JSON.stringify({id,status:res.status,resHeaders:Object.fromEntries(res.headers.entries()),body:typeof data==='string'?data:JSON.stringify(data)}));
-    if(!res.ok){ const err=new Error((typeof data==='string'?data:JSON.stringify(data))||('HTTP '+res.status)); err.status=res.status; err.data=data; throw err; }
-    const sid=data?.data?.id||data?.id||data?.session_id||data?.sessionId;
+    // Log the exact JSON we send
+    log('UPLOAD JSON PAYLOAD: ' + JSON.stringify(payload));
+
+    const r = await req('POST', path, {
+      headers: { 'Content-Type':'application/json; charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+
+    const sid=r?.data?.id||r?.id||r?.session_id||r?.sessionId;
     try{ if(sid) await req('POST',`/sessions/${encodeURIComponent(sid)}/enrich`);}catch(e){ log('Enrich trigger failed (non-fatal): '+e.message,'warn'); }
     return sid||'(unknown)';
   }
@@ -361,7 +348,6 @@
 (function(){
   'use strict';
 
-  // Loud surfacing of errors in the Status panel
   window.addEventListener('error', e=>{
     const box=document.getElementById('status');
     if(box) box.textContent += '\n[FATAL] ' + (e.message||e.error?.message||'script error');
@@ -371,7 +357,6 @@
     if(box) box.textContent += '\n[UNHANDLED] ' + (e.reason?.message || String(e.reason));
   });
 
-  // Simple modal util
   const $ = id => document.getElementById(id);
   function openModal(el){ el?.setAttribute('open',''); }
   function closeModal(el){ el?.removeAttribute('open'); }
@@ -382,36 +367,26 @@
     if(!window.CBAPI){ appendStatus('API layer failed to load.'); return; }
     const api = window.CBAPI;
 
-    // Elements
     const els = {
       apiStatus: $('apiStatus'),
-      // toolbar
       btnOpenAuth: $('btnOpenAuth'), btnLogs: $('btnLogs'), btnSelfTest: $('btnSelfTest'),
-      // modals
       authModal: $('authModal'), logsModal: $('logsModal'), selfTestModal: $('selfTestModal'),
       confModal: $('confModal'), vendorModal: $('vendorModal'), detailModal: $('detailModal'),
-      // auth fields
       apiUrl: $('apiUrl'), apiKey: $('apiKey'), authMode: $('authMode'), authParam: $('authParam'),
       btnSave: $('btnSave'), btnTest: $('btnTest'), btnCloseAuth: $('btnCloseAuth'),
-      // logs
       logsView: $('logsView'), logVerbosity: $('logVerbosity'),
       btnCopyLogs: $('btnCopyLogs'), btnDownloadTxt: $('btnDownloadTxt'), btnDownloadJson: $('btnDownloadJson'), btnCloseLogs: $('btnCloseLogs'),
-      // self-test
       selfTestOutput: $('selfTestOutput'), btnRunSelfTest: $('btnRunSelfTest'), btnCloseSelfTest: $('btnCloseSelfTest'),
-      // main UI
       confSelect: $('confSelect'), vendorSelect: $('vendorSelect'), btnAddConf: $('btnAddConf'), btnAddVendor: $('btnAddVendor'),
       imageInput: $('imageInput'), imagePreview: $('imagePreview'), notes: $('notes'),
       btnStart: $('btnStart'), btnStop: $('btnStop'), btnPrevious: $('btnPrevious'),
       prevConf: $('prevConf'), prevVendor: $('prevVendor'), btnLoadSessions: $('btnLoadSessions'), prevList: $('prevList'),
       pillAudio: $('pillAudio'), pillImages: $('pillImages'), pillSession: $('pillSession'),
-      // create modals
       newConfName: $('newConfName'), newConfStart: $('newConfStart'), newConfEnd: $('newConfEnd'), btnCreateConf: $('btnCreateConf'), btnCloseConf: $('btnCloseConf'),
       newVendorName: $('newVendorName'), newVendorConf: $('newVendorConf'), btnCreateVendor: $('btnCreateVendor'), btnCloseVendor: $('btnCloseVendor'),
-      // detail container
       detailContainer: $('detailContainer')
     };
 
-    // Mirror logs to status + logs modal
     function renderLogs(){
       const verbose = els.logVerbosity.value==='verbose';
       const lines = api.getLogs().map(l => verbose ? JSON.stringify(l,null,2) : `${l.t} [${(l.level||'info').toUpperCase()}] ${l.msg}${l.extra?(' '+l.extra):''}`);
@@ -423,7 +398,6 @@
       if(els.logsModal.hasAttribute('open') && els.logVerbosity.value==='verbose') renderLogs();
     });
 
-    // Dropdown helpers
     function noneOption(sel,label='— None —'){ const o=document.createElement('option'); o.value=''; o.textContent=label; sel.appendChild(o); }
     async function populateConfs(sel){
       const list = await api.listConferences(); sel.innerHTML=''; noneOption(sel);
@@ -533,7 +507,7 @@
       function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
       const imgHtml=(images&&images.length)?`<div class="preview">${images.map(u=>`<img src="${u}" class="thumb" alt="">`).join('')}</div>`:`<em class="muted">No images</em>`;
       const filesHtml=(files&&files.length)?`<ul>${files.map(f=>`<li><a href="${f.url||f.href||'#'}" target="_blank" rel="noopener">${f.name||f.filename||f.url||'file'}</a></li>`).join('')}</ul>`:`<em class="muted">No files</em>`;
-      els.detailContainer.innerHTML=`
+      $('detailContainer').innerHTML=`
         <div class="row" style="justify-content:space-between;align-items:center">
           <h2 id="detailTitle" style="margin:0">Session ${sessionId}</h2>
           <button class="ghost" id="btnCloseDetail" type="button">Close</button>
@@ -548,125 +522,170 @@
           <div class="section"><strong>Notes</strong><pre>${textField?esc(textField):'—'}</pre></div>
           <div class="section"><strong>Summary</strong><pre>${summary?esc(summary):'—'}</pre></div>
         </div>`;
-      openModal(els.detailModal); $('btnCloseDetail').onclick=()=>closeModal(els.detailModal);
+      openModal($('detailModal')); $('btnCloseDetail').onclick=()=>closeModal($('detailModal'));
     }
 
-    // Toolbar buttons
-    els.btnOpenAuth.addEventListener('click', ()=>{
+    // Toolbar
+    $('btnOpenAuth').addEventListener('click', ()=>{
       const cfg=api.getConfig()||{url:'',key:'',mode:'xapikey',param:'apiKey'};
-      els.apiUrl.value=cfg.url||''; els.apiKey.value=cfg.key||''; els.authMode.value=cfg.mode||'xapikey'; els.authParam.value=cfg.param||'apiKey';
-      openModal(els.authModal);
+      $('apiUrl').value=cfg.url||''; $('apiKey').value=cfg.key||''; $('authMode').value=cfg.mode||'xapikey'; $('authParam').value=cfg.param||'apiKey';
+      openModal($('authModal'));
     });
-    els.btnCloseAuth.addEventListener('click', ()=> closeModal(els.authModal));
-    els.btnSave.addEventListener('click', ()=>{
-      const url=els.apiUrl.value.trim(), key=els.apiKey.value.trim(), mode=els.authMode.value, param=(els.authParam.value.trim()||'apiKey');
+    $('btnCloseAuth').addEventListener('click', ()=> closeModal($('authModal')));
+    $('btnSave').addEventListener('click', ()=>{
+      const url=$('apiUrl').value.trim(), key=$('apiKey').value.trim(), mode=$('authMode').value, param=($('authParam').value.trim()||'apiKey');
       if(!url||!key){ alert('Enter API base URL and API key.'); return; }
-      api.setConfig({url,key,mode,param}); els.apiStatus.textContent='Connected'; closeModal(els.authModal); boot();
+      api.setConfig({url,key,mode,param}); $('apiStatus').textContent='Connected'; closeModal($('authModal')); boot();
     });
-    els.btnTest.addEventListener('click', async ()=>{ try{ await api.testConnectivity(); alert('Connection OK. Check Logs for details.'); }catch(e){ alert('Connection failed: '+e.message); } });
+    $('btnTest').addEventListener('click', async ()=>{ try{ await api.testConnectivity(); alert('Connection OK. Check Logs for details.'); }catch(e){ alert('Connection failed: '+e.message); } });
 
-    // Logs modal
-    function showLogs(){ renderLogs(); openModal(els.logsModal); }
-    els.btnLogs.addEventListener('click', showLogs);
-    els.btnCloseLogs.addEventListener('click', ()=> closeModal(els.logsModal));
-    els.logVerbosity.addEventListener('change', renderLogs);
-    els.btnCopyLogs.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(els.logsView.textContent||''); alert('Logs copied'); }catch{ alert('Copy failed. Select text and copy.'); } });
-    els.btnDownloadTxt.addEventListener('click', ()=> downloadBlob('cb-logs.txt', new Blob([els.logsView.textContent||''], {type:'text/plain'})));
-    els.btnDownloadJson.addEventListener('click', ()=> downloadBlob('cb-logs.json', new Blob([JSON.stringify(api.getLogs(),null,2)], {type:'application/json'})));
+    // Logs
+    function renderLogs(){
+      const verbose = $('logVerbosity').value==='verbose';
+      const lines = api.getLogs().map(l => verbose ? JSON.stringify(l,null,2) : `${l.t} [${(l.level||'info').toUpperCase()}] ${l.msg}${l.extra?(' '+l.extra):''}`);
+      $('logsView').textContent = lines.join('\n') || '(no logs yet)';
+    }
+    $('btnLogs').addEventListener('click', ()=>{ renderLogs(); openModal($('logsModal')); });
+    $('btnCloseLogs').addEventListener('click', ()=> closeModal($('logsModal')));
+    $('logVerbosity').addEventListener('change', renderLogs);
+    $('btnCopyLogs').addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText($('logsView').textContent||''); alert('Logs copied'); }catch{ alert('Copy failed. Select text and copy.'); } });
+    $('btnDownloadTxt').addEventListener('click', ()=> downloadBlob('cb-logs.txt', new Blob([$('logsView').textContent||''], {type:'text/plain'})));
+    $('btnDownloadJson').addEventListener('click', ()=> downloadBlob('cb-logs.json', new Blob([JSON.stringify(api.getLogs(),null,2)], {type:'application/json'})));
 
-    // Self test modal
-    els.btnSelfTest.addEventListener('click', ()=>{ els.selfTestOutput.textContent=''; openModal(els.selfTestModal); });
-    els.btnCloseSelfTest.addEventListener('click', ()=> closeModal(els.selfTestModal));
-    els.btnRunSelfTest.addEventListener('click', async ()=>{
-      els.selfTestOutput.textContent='';
-      try{ const out=await api.runSelfTest(); els.selfTestOutput.textContent=out.join('\n'); }
-      catch(e){ els.selfTestOutput.textContent='✖ Self-Test failed: '+e.message+' — check Logs.'; }
+    // Self test
+    $('btnSelfTest').addEventListener('click', ()=>{ $('selfTestOutput').textContent=''; openModal($('selfTestModal')); });
+    $('btnCloseSelfTest').addEventListener('click', ()=> closeModal($('selfTestModal')));
+    $('btnRunSelfTest').addEventListener('click', async ()=>{
+      $('selfTestOutput').textContent='';
+      try{ const out=await api.runSelfTest(); $('selfTestOutput').textContent=out.join('\n'); }
+      catch(e){ $('selfTestOutput').textContent='✖ Self-Test failed: '+e.message+' — check Logs.'; }
     });
 
     // Create dialogs
-    els.btnAddConf.addEventListener('click', ()=> openModal(els.confModal));
-    els.btnCloseConf.addEventListener('click', ()=> closeModal(els.confModal));
-    els.btnAddVendor.addEventListener('click', async ()=>{ await populateConfs(els.newVendorConf); openModal(els.vendorModal); });
-    els.btnCloseVendor.addEventListener('click', ()=> closeModal(els.vendorModal));
+    $('btnAddConf').addEventListener('click', ()=> openModal($('confModal')));
+    $('btnCloseConf').addEventListener('click', ()=> closeModal($('confModal')));
+    $('btnAddVendor').addEventListener('click', async ()=>{ await populateConfs($('newVendorConf')); openModal($('vendorModal')); });
+    $('btnCloseVendor').addEventListener('click', ()=> closeModal($('vendorModal')));
 
-    els.btnCreateConf.addEventListener('click', async ()=>{
+    $('btnCreateConf').addEventListener('click', async ()=>{
       try{
-        const name=els.newConfName.value.trim(); if(!name) return alert('Enter a conference name.');
-        const sd=els.newConfStart.value||api.todayISO(), ed=els.newConfEnd.value||sd;
+        const name=$('newConfName').value.trim(); if(!name) return alert('Enter a conference name.');
+        const sd=$('newConfStart').value||api.todayISO(), ed=$('newConfEnd').value||sd;
         const created=await api.createConference({ name, start_date: sd, end_date: ed });
         api.log('Conference created: '+(created?.id||created?.name||'ok'));
-        closeModal(els.confModal);
-        await populateConfs(els.confSelect);
-        const cid=created?.id??created?._id??created?.uuid; if(cid) els.confSelect.value=cid;
-        await populateVendorsForConf(els.confSelect.value, els.vendorSelect);
+        closeModal($('confModal'));
+        await populateConfs($('confSelect'));
+        const cid=created?.id??created?._id??created?.uuid; if(cid) $('confSelect').value=cid;
+        await populateVendorsForConf($('confSelect').value, $('vendorSelect'));
       }catch(e){ alert('Create conference failed: '+e.message); }
     });
 
-    els.btnCreateVendor.addEventListener('click', async ()=>{
+    $('btnCreateVendor').addEventListener('click', async ()=>{
       try{
-        const name=els.newVendorName.value.trim(), confId=els.newVendorConf.value;
+        const name=$('newVendorName').value.trim(), confId=$('newVendorConf').value;
         if(!name||!confId) return alert('Enter vendor name and select a conference.');
         const created=await api.createVendor({ name, conference_id: confId });
         api.log('Vendor created: '+(created?.id||created?.name||'ok'));
-        closeModal(els.vendorModal);
-        if(els.confSelect.value) await populateVendorsForConf(els.confSelect.value, els.vendorSelect);
-        const vid=created?.id??created?._id??created?.uuid; if(vid) els.vendorSelect.value=vid;
+        closeModal($('vendorModal'));
+        if($('confSelect').value) await populateVendorsForConf($('confSelect').value, $('vendorSelect'));
+        const vid=created?.id??created?._id??created?.uuid; if(vid) $('vendorSelect').value=vid;
       }catch(e){ alert('Create vendor failed: '+e.message); }
     });
 
-    els.confSelect.addEventListener('change', async ()=>{ await populateVendorsForConf(els.confSelect.value, els.vendorSelect); });
+    $('confSelect').addEventListener('change', async ()=>{ await populateVendorsForConf($('confSelect').value, $('vendorSelect')); });
 
     // Start/Stop/Upload
-    els.btnStart.addEventListener('click', async ()=>{
-      if(!api.getConfig()?.url || !api.getConfig()?.key) return alert('Configure API first (top left API button).');
-      els.btnStart.disabled=true; els.btnStop.disabled=false;
+    let mediaStream=null, mediaRecorder=null, audioChunks=[], recording=false;
+    let sessionStartIso=null, sessionEndIso=null;
+
+    function resetRecording(){ audioChunks=[]; recording=false; sessionStartIso=null; sessionEndIso=null; $('pillAudio').textContent='idle'; $('pillSession').textContent='—'; }
+
+    async function startRecording(){
+      if(!navigator.mediaDevices?.getUserMedia) throw new Error('Media capture not supported on this device.');
+      try{ mediaStream = await navigator.mediaDevices.getUserMedia({ audio:true }); }catch{ throw new Error('Microphone permission denied.'); }
+      const mime = MediaRecorder?.isTypeSupported?.('audio/webm;codecs=opus')?'audio/webm;codecs=opus':(MediaRecorder?.isTypeSupported?.('audio/mp4')?'audio/mp4':'audio/webm');
+      mediaRecorder = new MediaRecorder(mediaStream,{ mimeType:mime });
+      audioChunks=[];
+      mediaRecorder.addEventListener('dataavailable', e=>{ if(e.data.size>0) audioChunks.push(e.data); });
+      mediaRecorder.addEventListener('stop', ()=>{ try{ mediaStream.getTracks().forEach(t=>t.stop()); }catch{} });
+      mediaRecorder.start(1000);
+      recording=true; sessionStartIso=new Date().toISOString(); $('pillAudio').textContent='recording';
+      api.log('Audio recording started.');
+    }
+    async function stopRecordingGetBlob(){
+      if(!mediaRecorder||!recording) return null;
+      const p=new Promise(r=> mediaRecorder.addEventListener('stop', r, { once:true }));
+      mediaRecorder.stop(); api.log('Stopping recorder…'); await p;
+      sessionEndIso=new Date().toISOString();
+      const blob=new Blob(audioChunks,{ type: mediaRecorder.mimeType||'audio/webm' });
+      api.log(`Audio captured: ${(blob.size/1024/1024).toFixed(2)} MB`);
+      recording=false; return blob;
+    }
+
+    let imageFiles=[];
+    function renderImagePreview(){
+      const wrap=$('imagePreview'); wrap.innerHTML='';
+      imageFiles.forEach((f,i)=>{
+        const url=URL.createObjectURL(f);
+        const w=document.createElement('div'); w.className='thumbwrap';
+        const img=document.createElement('img'); img.src=url; img.className='thumb'; img.alt=f.name;
+        const x=document.createElement('button'); x.className='removebtn'; x.type='button'; x.textContent='×';
+        x.addEventListener('click',()=>{ imageFiles.splice(i,1); renderImagePreview(); });
+        w.appendChild(img); w.appendChild(x); wrap.appendChild(w);
+      });
+      $('pillImages').textContent=String(imageFiles.length);
+    }
+    $('imageInput').addEventListener('change', e=>{ imageFiles=imageFiles.concat(Array.from(e.target.files||[])); renderImagePreview(); });
+
+    $('btnStart').addEventListener('click', async ()=>{
+      const cfg=api.getConfig(); if(!cfg?.url || !cfg?.key){ alert('Configure API first (top “API” button).'); return; }
+      $('btnStart').disabled=true; $('btnStop').disabled=false;
       try{ await startRecording(); api.log('Session started. Recording in progress.'); }
-      catch(e){ els.btnStart.disabled=false; els.btnStop.disabled=true; alert('Cannot start recording: '+e.message); }
+      catch(e){ $('btnStart').disabled=false; $('btnStop').disabled=true; alert('Cannot start recording: '+e.message); }
     });
 
-    els.btnStop.addEventListener('click', async ()=>{
-      els.btnStop.disabled=true;
+    $('btnStop').addEventListener('click', async ()=>{
+      $('btnStop').disabled=true;
       try{
         const audioBlob=await stopRecordingGetBlob();
         if(!audioBlob) throw new Error('No audio captured.');
-        let conferenceId=els.confSelect.value||null;
-        let vendorId=els.vendorSelect.value||null;
+        let conferenceId=$('confSelect').value||null;
+        let vendorId=$('vendorSelect').value||null;
         ({ conferenceId, vendorId } = await api.ensureConferenceVendor({ conferenceId, vendorId, preferredVendorName:'Unknown Vendor' }));
         const sid = await api.uploadSession({
-          audioBlob, images: imageFiles, text: els.notes.value,
+          audioBlob, images: imageFiles, text: $('notes').value,
           conferenceId, vendorId,
           startIso: sessionStartIso||new Date().toISOString(),
           endIso: sessionEndIso||sessionStartIso||new Date().toISOString()
         });
-        els.pillSession.textContent=sid;
+        $('pillSession').textContent=sid;
         alert('Uploaded! Session ID: '+sid+'\nEnrichment started.');
       }catch(e){ alert('Upload failed: '+e.message); }
       finally{
-        els.btnStart.disabled=false; els.btnStop.disabled=true;
-        imageFiles=[]; els.imagePreview.innerHTML=''; els.pillImages.textContent='0'; els.notes.value='';
+        $('btnStart').disabled=false; $('btnStop').disabled=true;
+        imageFiles=[]; $('imagePreview').innerHTML=''; $('pillImages').textContent='0'; $('notes').value='';
         resetRecording();
       }
     });
 
-    // Previous list
-    els.btnPrevious.addEventListener('click', async ()=>{
-      await populateConfs(els.prevConf);
-      if(els.prevConf.value) await populateVendorsForConf(els.prevConf.value, els.prevVendor);
+    $('btnPrevious').addEventListener('click', async ()=>{
+      await populateConfs($('prevConf'));
+      if($('prevConf').value) await populateVendorsForConf($('prevConf').value, $('prevVendor'));
       document.querySelectorAll('h2')[1]?.scrollIntoView({behavior:'smooth'});
     });
-    els.prevConf.addEventListener('change', async ()=>{ await populateVendorsForConf(els.prevConf.value, els.prevVendor); });
-    els.btnLoadSessions.addEventListener('click', async ()=>{ await loadPrevious(els.prevConf.value||null, els.prevVendor.value||null); });
+    $('prevConf').addEventListener('change', async ()=>{ await populateVendorsForConf($('prevConf').value, $('prevVendor')); });
+    $('btnLoadSessions').addEventListener('click', async ()=>{ await loadPrevious($('prevConf').value||null, $('prevVendor').value||null); });
 
-    // Boot
     async function boot(){
       try{
-        const cfg=api.getConfig()||{ url:'https://conference-buddy-geoutils.replit.app/api', key:'', mode:'xapikey', param:'apiKey' };
+        const cfg=api.getConfig()||{ url:'', key:'', mode:'xapikey', param:'apiKey' };
         api.setConfig(cfg);
-        els.apiStatus.textContent = cfg.key ? 'Connected' : 'Disconnected';
-        await populateConfs(els.confSelect);
-        if(els.confSelect.value) await populateVendorsForConf(els.confSelect.value, els.vendorSelect);
-        await populateConfs(els.prevConf);
-        if(els.prevConf.value) await populateVendorsForConf(els.prevConf.value, els.prevVendor);
+        $('apiStatus').textContent = cfg.key ? 'Connected' : 'Disconnected';
+        if(!cfg.url){ throw new Error('API base URL not configured.'); }
+        await populateConfs($('confSelect'));
+        if($('confSelect').value) await populateVendorsForConf($('confSelect').value, $('vendorSelect'));
+        await populateConfs($('prevConf'));
+        if($('prevConf').value) await populateVendorsForConf($('prevConf').value, $('prevVendor'));
         api.log('Dropdowns populated from API.');
         $('status').textContent='Ready.';
       }catch(e){
