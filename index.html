@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Conference Buddy — Session Recorder (Mobile + Deep Logs)</title>
+<title>Conference Buddy — Session Recorder</title>
 <style>
   :root{
     --bg:#0a1020; --bg2:#0f1a33; --fg:#e6eefc; --muted:#9bb3e0;
@@ -17,23 +17,34 @@
   body{
     margin:0;background:linear-gradient(180deg,var(--bg),#071028);
     color:var(--fg);
-    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+    padding-top: 82px; /* space for fixed header + toolbar */
   }
   ::selection{background:var(--selection);color:#fff}
   a{color:var(--accent)}
-  /* Make room under sticky header on small screens */
-  body { padding-top: 56px; }
+
+  /* Header + Top Toolbar */
   header{
-    position:fixed;left:0;right:0;top:0;z-index:50;
-    background:linear-gradient(180deg,rgba(10,16,32,.95),rgba(10,16,32,.85));
-    backdrop-filter:blur(8px);
-    border-bottom:1px solid var(--border)
+    position:fixed;left:0;right:0;top:0;z-index:60;
+    background:linear-gradient(180deg,rgba(10,16,32,.98),rgba(10,16,32,.90));
+    backdrop-filter:blur(8px); border-bottom:1px solid var(--border)
   }
-  .wrap{max-width:740px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:12px}
-  .hbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 8px}
-  .brand{display:flex;gap:8px;align-items:center}
-  .badge,.chip{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:6px 10px}
+  .hbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px}
+  .brand{display:flex;gap:10px;align-items:center}
+  .brand strong{font-size:15px}
+  .badge,.chip{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:5px 10px}
   .badge{background:#0b1a3a;color:#c5d7ff}.chip{color:#b9caf2}
+
+  .toolbar{
+    display:flex;gap:8px;align-items:center;justify-content:flex-end;
+    padding:8px 10px; border-top:1px solid var(--border);
+    background:linear-gradient(180deg,rgba(12,20,40,.9),rgba(12,20,40,.85));
+  }
+  .toolbar button{min-width:92px}
+
+  .wrap{max-width:740px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:12px}
+
+  /* Controls / Sections */
   button,input,select,textarea{width:100%;padding:14px;border-radius:14px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);outline:none}
   button{cursor:pointer}
   button.primary{background:linear-gradient(180deg,var(--accent),var(--accent2));border:none;color:#fff;font-weight:700}
@@ -45,19 +56,16 @@
   label{font-size:12px;color:#9bb3e0;display:block;margin:6px 0 6px}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  @media(max-width:460px){ .grid2{grid-template-columns:1fr} }
+  @media(max-width:480px){ .grid2{grid-template-columns:1fr} }
   .pill{display:inline-flex;gap:6px;align-items:center;padding:6px 12px;background:#0d2048;border:1px solid var(--border);border-radius:999px;color:#bcd1ff;font-size:12px}
+
   .status{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;background:#0b152c;border:1px solid var(--border);border-radius:12px;padding:10px;max-height:40vh;overflow:auto}
-  .muted{color:#9bb3e0}
   .thumb{width:92px;height:92px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
   .thumbwrap{position:relative}
   .removebtn{position:absolute;top:4px;right:4px;background:#0008;border:1px solid var(--border);color:#fff;border-radius:999px;padding:2px 6px;font-size:12px}
   .preview{display:flex;gap:8px;flex-wrap:wrap}
-  .sticky-controls{position:sticky;top:-6px;z-index:40;padding-top:6px;background:linear-gradient(180deg,rgba(12,20,40,.8),rgba(12,20,40,0));backdrop-filter:blur(2px)}
-  #notes{min-height:280px}
-  @media(min-width:900px){.wrap{max-width:1100px} #notes{min-height:320px}}
 
-  /* Dialogs: white, readable */
+  /* Dialogs (white, readable) */
   dialog{border:none;border-radius:18px;padding:0;background:transparent;color:inherit}
   .dialog-card{
     background:var(--dialog-bg); color:var(--dialog-fg);
@@ -79,13 +87,17 @@
 <body>
 <header>
   <div class="hbar">
-    <div class="brand"><strong>Conference Buddy — Recorder</strong><span class="badge">mobile · dark/blue</span></div>
-    <div class="row">
-      <span id="apiStatus" class="chip">Disconnected</span>
-      <button id="btnLogs" class="ghost" title="View & export logs">Logs</button>
-      <button id="btnSelfTest" class="ghost" title="Run API self-test">Self-Test</button>
-      <button id="btnOpenAuth" class="ghost">API</button>
+    <div class="brand">
+      <strong>Conference Buddy — Recorder</strong>
+      <span class="badge">mobile · dark/blue</span>
     </div>
+    <span id="apiStatus" class="chip">Disconnected</span>
+  </div>
+  <!-- Top toolbar with buttons across the top -->
+  <div class="toolbar">
+    <button id="btnOpenAuth" class="ghost">API</button>
+    <button id="btnLogs" class="ghost" title="View & export logs">Logs</button>
+    <button id="btnSelfTest" class="ghost" title="Run API self-test">Self-Test</button>
   </div>
 </header>
 
@@ -93,37 +105,36 @@
   <!-- Recorder -->
   <section class="section">
     <h2>Session Recorder</h2>
-    <div class="sticky-controls">
-      <div class="grid2">
-        <div>
-          <label>Conference</label>
-          <div class="row">
-            <select id="confSelect" aria-label="Conference"></select>
-            <button id="btnAddConf" class="ghost">+ New</button>
-          </div>
-          <small class="muted">Optional; blank ⇒ “Unknown Conference”.</small>
-        </div>
-        <div>
-          <label>Vendor</label>
-          <div class="row">
-            <select id="vendorSelect" aria-label="Vendor"></select>
-            <button id="btnAddVendor" class="ghost">+ New</button>
-          </div>
-          <small class="muted">Optional; blank ⇒ “Unknown Vendor”.</small>
-        </div>
-      </div>
 
-      <div class="row" style="margin-top:8px">
-        <button id="btnStart" class="primary">▶ Start (audio begins)</button>
-        <button id="btnStop" class="danger" disabled>■ Stop & Upload</button>
-        <button id="btnPrevious" class="ghost">📜 Previous Sessions</button>
+    <div class="grid2">
+      <div>
+        <label>Conference</label>
+        <div class="row">
+          <select id="confSelect" aria-label="Conference"></select>
+          <button id="btnAddConf" class="ghost">+ New</button>
+        </div>
+        <small class="muted">Optional; blank ⇒ “Unknown Conference”.</small>
       </div>
+      <div>
+        <label>Vendor</label>
+        <div class="row">
+          <select id="vendorSelect" aria-label="Vendor"></select>
+          <button id="btnAddVendor" class="ghost">+ New</button>
+        </div>
+        <small class="muted">Optional; blank ⇒ “Unknown Vendor”.</small>
+      </div>
+    </div>
 
-      <div class="row" style="margin-top:8px">
-        <span class="pill">Audio: <strong id="pillAudio">idle</strong></span>
-        <span class="pill">Images: <strong id="pillImages">0</strong></span>
-        <span class="pill">Session ID: <strong id="pillSession">—</strong></span>
-      </div>
+    <div class="row" style="margin-top:8px">
+      <button id="btnStart" class="primary">▶ Start (audio begins)</button>
+      <button id="btnStop" class="danger" disabled>■ Stop & Upload</button>
+      <button id="btnPrevious" class="ghost">📜 Previous Sessions</button>
+    </div>
+
+    <div class="row" style="margin-top:8px">
+      <span class="pill">Audio: <strong id="pillAudio">idle</strong></span>
+      <span class="pill">Images: <strong id="pillImages">0</strong></span>
+      <span class="pill">Session ID: <strong id="pillSession">—</strong></span>
     </div>
 
     <div style="margin-top:8px">
@@ -219,7 +230,7 @@
       <button id="btnCloseSelfTest" class="ghost">Close</button>
     </div>
   </div>
-  <p class="muted">Runs: OPTIONS probe, /health, list/create conference (JSON w/ dates), list/create vendor (JSON w/ conference_id), upload (multipart → auto-fallback to JSON), enrich, fetch session/report. Uses your configured URL + key.</p>
+  <p class="muted">Runs: OPTIONS, /health, list/create conference (JSON w/ dates), list/create vendor (JSON w/ conference_id), upload (multipart → fallback JSON) with start/end/duration, enrich, fetch session/report.</p>
   <div id="selfTestOutput" class="dialog-status" style="min-height:220px;max-height:60vh"></div>
 </div></dialog>
 
@@ -256,11 +267,9 @@
 <dialog id="detailDialog"><div class="dialog-card" id="detailContainer"></div></dialog>
 
 <script>
-/* =========================
-   Mobile SPA with deep logs
-   ========================= */
-
-/* --- Element refs --- */
+/* ================
+   Core references
+   ================ */
 const els = {
   apiStatus: document.getElementById('apiStatus'),
   btnOpenAuth: document.getElementById('btnOpenAuth'),
@@ -327,7 +336,9 @@ const els = {
   btnCloseSelfTest: document.getElementById('btnCloseSelfTest'),
 };
 
-/* --- Persistent config --- */
+/* =================
+   Persistence
+   ================= */
 const store = {
   get api(){ return JSON.parse(localStorage.getItem('cb_api') || 'null'); },
   set api(v){ localStorage.setItem('cb_api', JSON.stringify(v)); },
@@ -335,7 +346,9 @@ const store = {
   set unknown(v){ localStorage.setItem('cb_unknown', JSON.stringify(v)); },
 };
 
-/* --- Logging with request/response capture --- */
+/* =================
+   Logging helpers
+   ================= */
 const LOG_CAP = 5000; let logBuffer = [];
 function redactHeaders(headers){
   const safe = {...headers};
@@ -344,29 +357,19 @@ function redactHeaders(headers){
   return safe;
 }
 function redactUrlParam(url, paramName){
-  try{
-    const u = new URL(url);
-    if (u.searchParams.has(paramName)) u.searchParams.set(paramName, '***');
-    return u.toString();
-  }catch{ return url; }
+  try{ const u = new URL(url); if (u.searchParams.has(paramName)) u.searchParams.set(paramName, '***'); return u.toString(); }
+  catch{ return url; }
 }
-function objFromHeaders(headers){
-  const o = {};
-  try{ for(const [k,v] of headers.entries()) o[k] = v; }catch{}
-  return o;
-}
+function objFromHeaders(headers){ const o={}; try{ for(const [k,v] of headers.entries()) o[k]=v; }catch{} return o; }
 function pushLog(entry){
-  const now = new Date();
-  const item = { t: now.toISOString(), ...entry };
+  const now = new Date(); const item = { t: now.toISOString(), ...entry };
   logBuffer.push(item); if(logBuffer.length>LOG_CAP) logBuffer.shift();
   const label = (entry.level||'info').toUpperCase();
-  const msg = entry.msg || '';
-  const extra = entry.extra ? ` ${entry.extra}` : '';
+  const msg = entry.msg || ''; const extra = entry.extra ? ` ${entry.extra}` : '';
   const line = `[${now.toLocaleTimeString()}] [${label}] ${msg}${extra}`;
   els.status.textContent += (els.status.textContent ? '\n' : '') + line;
   els.status.scrollTop = els.status.scrollHeight;
-  const fn = entry.level==='error'?'error':(entry.level==='warn'?'warn':'log');
-  console[fn](item);
+  const fn = entry.level==='error'?'error':(entry.level==='warn'?'warn':'log'); console[fn](item);
 }
 function log(msg, level='info', extra=''){ pushLog({msg, level, extra}); }
 function netStart({method, url, headers, paramName}){
@@ -388,103 +391,58 @@ function netErr(ctx, err){
 }
 function showLogs(){
   const verbose = els.logVerbosity.value === 'verbose';
-  const text = logBuffer.map(l=>{
-    if(!verbose) return `${l.t} [${(l.level||'info').toUpperCase()}] ${l.msg}${l.extra?(' '+l.extra):''}`;
-    return JSON.stringify(l, null, 2);
-  }).join('\n');
+  const text = logBuffer.map(l=> verbose ? JSON.stringify(l, null, 2) : `${l.t} [${(l.level||'info').toUpperCase()}] ${l.msg}${l.extra?(' '+l.extra):''}`).join('\n');
   els.logsView.textContent = text || '(no logs yet)';
 }
 
-/* --- UI helpers --- */
-function setConnected(on){
-  els.apiStatus.textContent = on ? 'Connected' : 'Disconnected';
-  els.apiStatus.style.background = on ? '#062f14' : '';
-  els.apiStatus.style.color = on ? '#0b3a2a' : '';
-  els.apiStatus.style.borderColor = on ? '#134e4a' : 'var(--border)';
-}
-function escapeHtml(str){ return str.replace(/[&<>"']/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s])); }
+/* =================
+   Fetch wrapper
+   ================= */
 function joinUrl(base, path){ return base.replace(/\/+$/,'') + (path.startsWith('/')? path : '/'+path); }
-function addQuery(url, kv){
-  const u = new URL(url);
-  for(const [k,v] of Object.entries(kv)) if (v!=null && v!=='') u.searchParams.set(k, v);
-  return u.toString();
-}
+function addQuery(url, kv){ const u = new URL(url); for(const [k,v] of Object.entries(kv)) if (v!=null && v!=='') u.searchParams.set(k, v); return u.toString(); }
+function buildAuthHeaders(mode, key){ const h={}; if(mode==='bearer') h['Authorization']=`Bearer ${key}`; else if(mode==='xapikey') h['X-API-Key']=key; return h; }
+function applyAuthToUrl(url, mode, key, paramName){ return mode==='query' ? addQuery(url, {[paramName]: key}) : url; }
 
-/* --- Auth helpers --- */
-function buildAuthHeaders(mode, key){
-  const h = {};
-  if (mode === 'bearer') h['Authorization'] = `Bearer ${key}`;
-  else if (mode === 'xapikey') h['X-API-Key'] = key;
-  return h; // query mode uses URL only
-}
-function applyAuthToUrl(url, mode, key, paramName){
-  if (mode === 'query') return addQuery(url, {[paramName]: key});
-  return url;
-}
-
-/* --- Fetch wrapper (deep logs, response capture) --- */
 async function apiFetch(path, opts={}){
-  const cfg = store.api;
-  if(!cfg?.url) throw new Error('Missing API base URL. Open API Settings.');
+  const cfg = store.api; if(!cfg?.url) throw new Error('Missing API base URL. Open API Settings.');
   const method = (opts.method || 'GET').toUpperCase();
-  const mode = cfg.mode || 'xapikey';
-  const key = cfg.key || '';
-  const paramName = cfg.param || 'apiKey';
-
-  const baseUrl = joinUrl(cfg.url, path);
-  const url = applyAuthToUrl(baseUrl, mode, key, paramName);
+  const mode = cfg.mode || 'xapikey'; const key = cfg.key || ''; const paramName = cfg.param || 'apiKey';
+  const baseUrl = joinUrl(cfg.url, path); const url = applyAuthToUrl(baseUrl, mode, key, paramName);
   const headers = { ...(opts.headers||{}), ...buildAuthHeaders(mode, key) };
-  // JSON if body is a string
   if (opts.body && typeof opts.body === 'string' && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
 
   const ctx = netStart({ method, url, headers, paramName });
-
   try{
     const res = await fetch(url, { method, headers, body: opts.body || undefined, mode:'cors', credentials:'omit' });
     const ct = (res.headers.get('content-type') || '').toLowerCase();
 
-    // Body sample for logs
     let bodySample = null;
     try{
-      if (ct.includes('application/json')) {
-        const clone = await res.clone().json();
-        bodySample = JSON.stringify(clone).slice(0, 2000);
-      } else if (ct.includes('text/')) {
-        const txt = await res.clone().text();
-        bodySample = txt.slice(0, 2000);
-      } else {
-        const blob = await res.clone().blob();
-        bodySample = `[blob ${blob.type || 'application/octet-stream'} ${blob.size} bytes]`;
-      }
+      if (ct.includes('application/json')) bodySample = JSON.stringify(await res.clone().json()).slice(0,2000);
+      else if (ct.includes('text/')) bodySample = (await res.clone().text()).slice(0,2000);
+      else { const blob = await res.clone().blob(); bodySample = `[blob ${blob.type||'application/octet-stream'} ${blob.size} bytes]`; }
     }catch{}
 
     netEnd(ctx, res, bodySample);
-
-    if(!res.ok){
-      const err = new Error(`HTTP ${res.status} ${res.statusText}${bodySample ? ' — ' + bodySample : ''}`);
-      err.status = res.status;
-      err.body = bodySample || '';
-      throw err;
-    }
+    if(!res.ok){ const err = new Error(`HTTP ${res.status} ${res.statusText}${bodySample ? ' — ' + bodySample : ''}`); err.status=res.status; err.body = bodySample||''; throw err; }
     if(ct.includes('application/json')) return res.json();
     return res.blob();
   }catch(e){
-    // Optional 415 recovery (FormData->JSON if safe)
-    if ((e?.status === 415 || (e?.status === 500 && String(e.body||'').includes("Unsupported Media Type"))) && opts.body instanceof FormData) {
+    // Upload fallback (multipart -> JSON) when server demands JSON
+    if ((e?.status === 415 || (e?.status === 500 && String(e.body||'').includes('Unsupported Media Type'))) && opts.body instanceof FormData) {
       try {
         const asJson = await formDataToJsonPayload(opts.body);
         log('Upload endpoint expects JSON — retrying as application/json with base64 media …', 'warn');
         return await apiFetch(path, { ...opts, body: JSON.stringify(asJson) });
-      } catch(re){
-        log('Retry-as-JSON failed to construct payload: ' + re.message, 'error');
-      }
+      } catch(re){ log('Retry-as-JSON failed to construct payload: ' + re.message, 'error'); }
     }
-    netErr(ctx, e);
-    throw e;
+    netErr(ctx, e); throw e;
   }
 }
 
-/* --- Helpers for API list shapes --- */
+/* =================
+   Shapes / helpers
+   ================= */
 function asArray(maybe){
   if (Array.isArray(maybe)) return maybe;
   if (maybe && typeof maybe === 'object') {
@@ -493,15 +451,14 @@ function asArray(maybe){
   }
   return [];
 }
+function escapeHtml(str){ return str.replace(/[&<>"']/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s])); }
+function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
 
-/* --- File helpers: base64 JSON fall-back --- */
+/* =================
+   File JSON fallback
+   ================= */
 function readBlobAsDataURL(blob){
-  return new Promise((resolve,reject)=>{
-    const r = new FileReader();
-    r.onerror = ()=>reject(new Error('FileReader error'));
-    r.onload = ()=>resolve(String(r.result||''));
-    r.readAsDataURL(blob);
-  });
+  return new Promise((resolve,reject)=>{ const r=new FileReader(); r.onerror=()=>reject(new Error('FileReader error')); r.onload=()=>resolve(String(r.result||'')); r.readAsDataURL(blob); });
 }
 async function formDataToJsonPayload(fd){
   const payload = { images: [], audio: null };
@@ -509,7 +466,7 @@ async function formDataToJsonPayload(fd){
   for (const [k, v] of fd.entries()){
     if (v instanceof Blob){
       const isAudio = k.toLowerCase().includes('audio');
-      const dataUrl = await readBlobAsDataURL(v); // "data:TYPE;base64,XXXX"
+      const dataUrl = await readBlobAsDataURL(v);
       const [meta, b64] = dataUrl.split(',', 2);
       const contentType = (meta.match(/^data:(.*?);base64$/)||[])[1] || (v.type||'application/octet-stream');
       const fileObj = { filename: (v.name||('file.'+(contentType.split('/')[1]||'bin'))), content_type: contentType, data: b64 };
@@ -518,20 +475,29 @@ async function formDataToJsonPayload(fd){
       plain[k] = v;
     }
   }
-  // copy text fields into both snake_case and camelCase for maximized compatibility
+  // carry across known text fields (include snake & camel for compat)
   const confId = plain.conference_id || plain.conferenceId || '';
   const vendId = plain.vendor_id || plain.vendorId || '';
-  const notes = plain.notes || '';
+  const notes  = plain.notes || '';
+  const st     = plain.start_time || plain.startTime || '';
+  const et     = plain.end_time || plain.endTime || '';
+  const dur    = plain.duration_seconds || plain.durationSeconds || '';
+
   if (confId){ payload.conference_id = confId; payload.conferenceId = confId; }
   if (vendId){ payload.vendor_id = vendId; payload.vendorId = vendId; }
   if (notes){ payload.notes = notes; }
+  if (st){ payload.start_time = st; payload.startTime = st; }
+  if (et){ payload.end_time = et; payload.endTime = et; }
+  if (dur){ payload.duration_seconds = dur; payload.durationSeconds = dur; }
+
   return payload;
 }
 
-/* --- Dropdowns --- */
+/* =================
+   Dropdowns
+   ================= */
 async function loadConferences(selectEl){
-  const resp = await apiFetch('/conferences');
-  const list = asArray(resp);
+  const resp = await apiFetch('/conferences'); const list = asArray(resp);
   selectEl.innerHTML = '';
   for(const c of list){
     const opt = document.createElement('option');
@@ -541,8 +507,7 @@ async function loadConferences(selectEl){
   }
 }
 async function loadVendorsForConference(confId, selectEl){
-  selectEl.innerHTML = '';
-  if(!confId) return;
+  selectEl.innerHTML = ''; if(!confId) return;
   try{
     const resp = await apiFetch(`/conferences/${encodeURIComponent(confId)}/vendors`);
     const list = asArray(resp);
@@ -565,8 +530,9 @@ async function loadVendorsForConference(confId, selectEl){
   }
 }
 
-/* --- Unknown placeholders (JSON create w/ required dates) --- */
-function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+/* =================
+   Unknown placeholders
+   ================= */
 async function ensureUnknowns(){
   const cached = store.unknown;
   if(cached?.conferenceId && cached?.vendorId) return cached;
@@ -608,85 +574,121 @@ async function ensureUnknowns(){
   return out;
 }
 
-/* --- Recording --- */
+/* =================
+   Recording
+   ================= */
 let mediaStream=null, mediaRecorder=null, audioChunks=[], recording=false;
-function resetRecording(){ audioChunks=[]; recording=false; els.pillAudio.textContent='idle'; els.pillSession.textContent='—'; }
+let sessionStartIso=null, sessionEndIso=null;
+
+function resetRecording(){
+  audioChunks=[]; recording=false;
+  sessionStartIso=null; sessionEndIso=null;
+  els.pillAudio.textContent='idle'; els.pillSession.textContent='—';
+}
+
 async function startRecording(){
   try{ mediaStream = await navigator.mediaDevices.getUserMedia({ audio:true }); }
   catch(err){ throw new Error('Microphone permission denied or unavailable.'); }
   const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':
                MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':'audio/webm';
   mediaRecorder = new MediaRecorder(mediaStream,{ mimeType:mime });
-  audioChunks=[]; mediaRecorder.addEventListener('dataavailable', e=>{ if(e.data.size>0) audioChunks.push(e.data); });
+  audioChunks=[];
+  mediaRecorder.addEventListener('dataavailable', e=>{ if(e.data.size>0) audioChunks.push(e.data); });
   mediaRecorder.addEventListener('stop', ()=>{ mediaStream.getTracks().forEach(t=>t.stop()); });
-  mediaRecorder.start(1000); recording=true; els.pillAudio.textContent='recording'; log('Audio recording started.');
+  mediaRecorder.start(1000);
+  recording=true;
+  sessionStartIso = new Date().toISOString();
+  els.pillAudio.textContent='recording';
+  log('Audio recording started.');
 }
+
 async function stopRecordingGetBlob(){
   if(!mediaRecorder || !recording) return null;
   const stopped = new Promise(resolve=> mediaRecorder.addEventListener('stop', resolve, { once:true }));
   mediaRecorder.stop(); log('Stopping recorder…'); await stopped;
+  sessionEndIso = new Date().toISOString();
   const blob = new Blob(audioChunks,{ type: mediaRecorder.mimeType || 'audio/webm' });
   log(`Audio captured: ${(blob.size/1024/1024).toFixed(2)} MB`);
-  resetRecording(); return blob;
+  recording=false;
+  return blob;
 }
 
-/* --- Images (dynamic) --- */
+/* =================
+   Images (dynamic)
+   ================= */
 let imageFiles = [];
 function renderImagePreview(){
-  els.imagePreview.innerHTML = '';
+  const preview = els.imagePreview; preview.innerHTML = '';
   imageFiles.forEach((f, idx)=>{
     const url = URL.createObjectURL(f);
     const wrap = document.createElement('div'); wrap.className='thumbwrap';
     const img = document.createElement('img'); img.src=url; img.className='thumb'; img.alt = f.name;
     const btn = document.createElement('button'); btn.className='removebtn'; btn.type='button'; btn.textContent='×';
     btn.addEventListener('click', ()=>{ imageFiles.splice(idx,1); renderImagePreview(); });
-    wrap.appendChild(img); wrap.appendChild(btn); els.imagePreview.appendChild(wrap);
+    wrap.appendChild(img); wrap.appendChild(btn); preview.appendChild(wrap);
   });
   els.pillImages.textContent = String(imageFiles.length);
 }
 els.imageInput.addEventListener('change', (e)=>{ imageFiles = imageFiles.concat(Array.from(e.target.files || [])); renderImagePreview(); });
 
-/* --- Upload & Enrich (dual-mode) --- */
+/* =================
+   Upload & Enrich
+   ================= */
+function secondsBetweenISO(startIso, endIso){
+  try{ const a = new Date(startIso).getTime(); const b = new Date(endIso).getTime(); return Math.max(0, Math.round((b-a)/1000)); }catch{ return 0; }
+}
+
 async function uploadSession({audioBlob, images, notes, conferenceId, vendorId}){
+  const startIso = sessionStartIso || new Date().toISOString();
+  const endIso   = sessionEndIso   || startIso;
+  const duration = secondsBetweenISO(startIso, endIso);
+
   // 1) Try multipart first
   const fd = new FormData();
   if(audioBlob) fd.append('audio', audioBlob, `session.${(audioBlob.type.split('/')[1]||'webm').split(';')[0]}`);
   for(const f of images){ fd.append('images', f, f.name); }
   if(notes) fd.append('notes', notes);
+
+  // IDs (both cases)
   if(conferenceId){ fd.append('conference_id', conferenceId); fd.append('conferenceId', conferenceId); }
   if(vendorId){ fd.append('vendor_id', vendorId); fd.append('vendorId', vendorId); }
+
+  // Timing metadata (both cases)
+  fd.append('start_time', startIso); fd.append('startTime', startIso);
+  fd.append('end_time', endIso);     fd.append('endTime', endIso);
+  fd.append('duration_seconds', String(duration)); fd.append('durationSeconds', String(duration));
 
   try{
     const res = await apiFetch('/sessions/upload', { method:'POST', body: fd });
     const sessionId = res.id ?? res.sessionId ?? res._id ?? res.uuid;
     if(!sessionId) throw new Error('Upload succeeded but response did not include a session ID.');
     log(`Uploaded. Session ID: ${sessionId}`); els.pillSession.textContent = sessionId;
-    try{
-      await apiFetch(`/sessions/${encodeURIComponent(sessionId)}/enrich`, { method:'POST' });
-      log('Enrichment triggered.');
-    }catch(e){ log(`Warning: could not trigger enrichment automatically — ${e.message}`,'warn'); }
+    try{ await apiFetch(`/sessions/${encodeURIComponent(sessionId)}/enrich`, { method:'POST' }); log('Enrichment triggered.'); }
+    catch(e){ log(`Warning: could not trigger enrichment automatically — ${e.message}`,'warn'); }
     return sessionId;
   }catch(err){
-    // 2) If the backend insists on JSON (415/“Unsupported Media Type”), retry as JSON with base64
     const hint = String(err.body||err.message||'');
     const isMediaTypeComplaint = err.status === 415 || (err.status === 500 && hint.includes('Unsupported Media Type'));
     if (!isMediaTypeComplaint) throw err;
 
-    log('Server rejected multipart for /sessions/upload. Retrying with JSON payload (base64)…','warn');
+    log('Server rejected multipart for /sessions/upload. Retrying with JSON payload (base64 + timing)…','warn');
     const jsonPayload = await formDataToJsonPayload(fd);
     const res = await apiFetch('/sessions/upload', { method:'POST', body: JSON.stringify(jsonPayload) });
     const sessionId = res.id ?? res.sessionId ?? res._id ?? res.uuid;
     if(!sessionId) throw new Error('Upload (JSON) succeeded but response did not include a session ID.');
     log(`Uploaded (JSON). Session ID: ${sessionId}`); els.pillSession.textContent = sessionId;
-    try{
-      await apiFetch(`/sessions/${encodeURIComponent(sessionId)}/enrich`, { method:'POST' });
-      log('Enrichment triggered.');
-    }catch(e){ log(`Warning: could not trigger enrichment automatically — ${e.message}`,'warn'); }
+    try{ await apiFetch(`/sessions/${encodeURIComponent(sessionId)}/enrich`, { method:'POST' }); log('Enrichment triggered.'); }
+    catch(e){ log(`Warning: could not trigger enrichment automatically — ${e.message}`,'warn'); }
     return sessionId;
+  } finally {
+    // reset recording UI state but keep IDs visible
+    resetRecording();
   }
 }
 
-/* --- Previous sessions --- */
+/* =================
+   Previous sessions
+   ================= */
 async function loadPrevious(conferenceId, vendorId){
   const sessions = [];
   async function forVendor(vid){
@@ -756,24 +758,15 @@ async function openSessionDetail(sessionId){
   els.detailDialog.showModal();
 }
 
-/* --- Self-Test Suite --- */
+/* =================
+   Self-test suite
+   ================= */
 function writeSelf(msg){ els.selfTestOutput.textContent += (els.selfTestOutput.textContent?'\n':'') + msg; }
 function mkSilentWav(seconds=1, sampleRate=8000){
-  // 16-bit PCM silence WAV
-  const numSamples = seconds * sampleRate;
-  const bytesPerSample = 2;
-  const blockAlign = 1 * bytesPerSample;
-  const byteRate = sampleRate * blockAlign;
-  const dataSize = numSamples * bytesPerSample;
-  const buf = new ArrayBuffer(44 + dataSize);
-  const dv = new DataView(buf);
-  let o = 0;
-  function w32(v){ dv.setUint32(o, v, true); o+=4; }
-  function w16(v){ dv.setUint16(o, v, true); o+=2; }
-  function ws(s){ for(let i=0;i<s.length;i++) dv.setUint8(o++, s.charCodeAt(i)); }
-  ws('RIFF'); w32(36 + dataSize); ws('WAVE');
-  ws('fmt '); w32(16); w16(1); w16(1); w32(sampleRate); w32(byteRate); w16(blockAlign); w16(16);
-  ws('data'); w32(dataSize);
+  const numSamples = seconds * sampleRate, bytesPerSample=2, blockAlign=1*bytesPerSample, byteRate=sampleRate*blockAlign, dataSize=numSamples*bytesPerSample;
+  const buf = new ArrayBuffer(44 + dataSize); const dv = new DataView(buf); let o=0;
+  function w32(v){ dv.setUint32(o, v, true); o+=4; } function w16(v){ dv.setUint16(o, v, true); o+=2; } function ws(s){ for(let i=0;i<s.length;i++) dv.setUint8(o++, s.charCodeAt(i)); }
+  ws('RIFF'); w32(36 + dataSize); ws('WAVE'); ws('fmt '); w32(16); w16(1); w16(1); w32(sampleRate); w32(byteRate); w16(blockAlign); w16(16); ws('data'); w32(dataSize);
   return new Blob([buf], { type:'audio/wav' });
 }
 async function runSelfTest(){
@@ -783,71 +776,52 @@ async function runSelfTest(){
     if(!cfg?.url || !cfg?.key) { writeSelf('✖ Missing URL or API key in settings.'); return; }
     writeSelf('• Using base: ' + cfg.url);
 
-    // 1) OPTIONS preflight probe
     const optionsUrl = joinUrl(cfg.url, '/conferences');
     const ctx = netStart({method:'OPTIONS', url:optionsUrl, headers:{}, paramName:cfg.param||'apiKey'});
     const res = await fetch(optionsUrl, { method:'OPTIONS', mode:'cors', credentials:'omit' });
     const h = objFromHeaders(res.headers); netEnd(ctx, res, JSON.stringify(h).slice(0,1000));
     writeSelf(`OPTIONS /conferences → ${res.status} (see Logs for headers)`);
 
-    // 2) /health
     await apiFetch('/health'); writeSelf('GET /health ✓');
 
-    // 3) list conferences
-    const confs = await apiFetch('/conferences');
-    const confArr = asArray(confs);
+    const confs = await apiFetch('/conferences'); const confArr = asArray(confs);
     writeSelf(`GET /conferences ✓ (${confArr.length} found)`);
 
-    // 4) create temp conference (JSON + required dates)
-    const cname = 'CB SelfTest ' + new Date().toISOString();
-    const today = todayISO();
-    const cRes = await apiFetch('/conferences', {
-      method:'POST',
-      body: JSON.stringify({ name: cname, start_date: today, end_date: today })
-    });
-    const cid = cRes.id ?? cRes._id ?? cRes.uuid ?? cRes.conferenceId;
-    writeSelf(`POST /conferences ✓ id=${cid}`);
+    const cname = 'CB SelfTest ' + new Date().toISOString(); const today = todayISO();
+    const cRes = await apiFetch('/conferences', { method:'POST', body: JSON.stringify({ name: cname, start_date: today, end_date: today }) });
+    const cid = cRes.id ?? cRes._id ?? cRes.uuid ?? cRes.conferenceId; writeSelf(`POST /conferences ✓ id=${cid}`);
 
-    // 5) create vendor (JSON; use conference_id)
-    const vRes = await apiFetch('/vendors', {
-      method:'POST',
-      body: JSON.stringify({ name: 'CB SelfTest Vendor', conference_id: cid })
-    });
-    const vid = vRes.id ?? vRes._id ?? vRes.uuid ?? vRes.vendorId;
-    writeSelf(`POST /vendors ✓ id=${vid}`);
+    const vRes = await apiFetch('/vendors', { method:'POST', body: JSON.stringify({ name: 'CB SelfTest Vendor', conference_id: cid }) });
+    const vid = vRes.id ?? vRes._id ?? vRes.uuid ?? vRes.vendorId; writeSelf(`POST /vendors ✓ id=${vid}`);
 
-    // 6) upload session (silent wav) — will auto-fallback to JSON if needed
+    const st = new Date().toISOString(); // pretend started now
     const silent = mkSilentWav(1,8000);
     const upload = new FormData();
     upload.append('audio', silent, 'selftest.wav');
-    upload.append('notes', 'Self-test upload at ' + new Date().toISOString());
+    upload.append('notes', 'Self-test upload ' + st);
     upload.append('conference_id', cid); upload.append('conferenceId', cid);
-    upload.append('vendor_id', vid); upload.append('vendorId', vid);
+    upload.append('vendor_id', vid);     upload.append('vendorId', vid);
+    upload.append('start_time', st);     upload.append('startTime', st);
+    upload.append('end_time', st);       upload.append('endTime', st);
+    upload.append('duration_seconds', '1'); upload.append('durationSeconds','1');
     const sRes = await apiFetch('/sessions/upload', { method:'POST', body: upload });
-    const sid = sRes.id ?? sRes._id ?? sRes.uuid ?? sRes.sessionId;
-    writeSelf(`POST /sessions/upload ✓ id=${sid}`);
+    const sid = sRes.id ?? sRes._id ?? sRes.uuid ?? sRes.sessionId; writeSelf(`POST /sessions/upload ✓ id=${sid}`);
 
-    // 7) trigger enrich
-    await apiFetch(`/sessions/${encodeURIComponent(sid)}/enrich`, { method:'POST' });
-    writeSelf('POST /sessions/{id}/enrich ✓ (started)');
-
-    // 8) fetch session + report
+    await apiFetch(`/sessions/${encodeURIComponent(sid)}/enrich`, { method:'POST' }); writeSelf('POST /sessions/{id}/enrich ✓ (started)');
     await apiFetch(`/sessions/${encodeURIComponent(sid)}`); writeSelf('GET /sessions/{id} ✓');
     await apiFetch(`/reports/session/${encodeURIComponent(sid)}`); writeSelf('GET /reports/session/{id} ✓');
 
-    writeSelf('✔ Self-Test completed. See Logs (Verbose) for full headers & body samples.');
+    writeSelf('✔ Self-Test completed. See Logs (Verbose) for details.');
   }catch(e){
     writeSelf('✖ Self-Test failed: ' + e.message + ' — check Logs for details.');
   }
 }
 
-/* --- Events --- */
+/* =================
+   Events & Boot
+   ================= */
 els.btnOpenAuth.addEventListener('click', ()=>{
-  // Prefill with your last known-good base (from your logs). Change anytime.
-  const cfg = store.api || {
-    url:'https://495c2d21-c9d4-4b7a-a885-9e9b22d936af-00-3kg4e5ukszg8i.riker.replit.dev/api',
-    key:'', mode:'xapikey', param:'apiKey'
-  };
+  const cfg = store.api || { url:'https://495c2d21-c9d4-4b7a-a885-9e9b22d936af-00-3kg4e5ukszg8i.riker.replit.dev/api', key:'', mode:'xapikey', param:'apiKey' };
   els.apiUrl.value = cfg.url || '';
   els.apiKey.value = cfg.key || '';
   els.authMode.value = cfg.mode || 'xapikey';
@@ -878,33 +852,25 @@ els.btnTest.addEventListener('click', async ()=>{
   }catch(e){ alert('Connection failed: ' + e.message); }
 });
 
-/* Logs modal */
 els.btnLogs.addEventListener('click', ()=>{ showLogs(); els.logsDialog.showModal(); });
 els.btnCloseLogs.addEventListener('click', ()=> els.logsDialog.close());
 els.logVerbosity.addEventListener('change', showLogs);
-els.btnCopyLogs.addEventListener('click', async ()=>{
-  try{ await navigator.clipboard.writeText(els.logsView.textContent || ''); alert('Logs copied'); }
-  catch(_){ alert('Copy failed. Select text and copy.'); }
-});
-function downloadBlob(name, blob){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0); }
+els.btnCopyLogs.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(els.logsView.textContent || ''); alert('Logs copied'); } catch(_){ alert('Copy failed. Select text and copy.'); } });
+function downloadBlob(name, blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},0); }
 els.btnDownloadTxt.addEventListener('click', ()=> downloadBlob('cb-logs.txt', new Blob([els.logsView.textContent||''], {type:'text/plain'})));
 els.btnDownloadJson.addEventListener('click', ()=> downloadBlob('cb-logs.json', new Blob([JSON.stringify(logBuffer,null,2)], {type:'application/json'})));
 
-/* Self-Test modal */
 els.btnSelfTest.addEventListener('click', ()=> { els.selfTestOutput.textContent=''; els.selfTestDialog.showModal(); });
 els.btnCloseSelfTest.addEventListener('click', ()=> els.selfTestDialog.close());
 els.btnRunSelfTest.addEventListener('click', runSelfTest);
 
-/* Create dialogs */
 els.btnAddConf.addEventListener('click', ()=> els.confDialog.showModal());
 els.btnAddVendor.addEventListener('click', async ()=>{ await loadConferences(els.newVendorConf); els.vendorDialog.showModal(); });
 
-/* CREATE AS JSON (with required dates) */
 els.btnCreateConf.addEventListener('click', async ()=>{
   try{
     const name = els.newConfName.value.trim(); if(!name) return alert('Please enter a conference name.');
-    const sd = els.newConfStart.value || todayISO();
-    const ed = els.newConfEnd.value || sd;
+    const sd = els.newConfStart.value || todayISO(); const ed = els.newConfEnd.value || sd;
     const payload = { name, start_date: sd, end_date: ed };
     const created = await apiFetch('/conferences', { method:'POST', body: JSON.stringify(payload) });
     log('Conference created: ' + (created?.id || created?.name || 'ok'));
@@ -928,20 +894,15 @@ els.btnCreateVendor.addEventListener('click', async ()=>{
   }catch(e){ alert('Create vendor failed: ' + e.message); }
 });
 
-/* Select changes */
 els.confSelect.addEventListener('change', async ()=>{ await loadVendorsForConference(els.confSelect.value, els.vendorSelect); });
 
-/* Record controls */
 els.imageInput.addEventListener('change', (e)=>{ imageFiles = imageFiles.concat(Array.from(e.target.files || [])); renderImagePreview(); });
+
 els.btnStart.addEventListener('click', async ()=>{
   if(!store.api){ return alert('Configure API first.'); }
   els.btnStart.disabled = true; els.btnStop.disabled = false;
-  try{
-    await startRecording();
-    log('Session started. Recording in progress.');
-  }catch(e){
-    els.btnStart.disabled=false; els.btnStop.disabled=true; alert('Cannot start recording: ' + e.message);
-  }
+  try{ await startRecording(); log('Session started. Recording in progress.'); }
+  catch(e){ els.btnStart.disabled=false; els.btnStop.disabled=true; alert('Cannot start recording: ' + e.message); }
 });
 els.btnStop.addEventListener('click', async ()=>{
   els.btnStop.disabled = true;
@@ -964,27 +925,19 @@ els.btnStop.addEventListener('click', async ()=>{
       conferenceId, vendorId
     });
     alert('Uploaded! Session ID: ' + sessionId + '\nEnrichment started.');
-  }catch(e){
-    alert('Upload failed: ' + e.message);
-  }finally{
+  }catch(e){ alert('Upload failed: ' + e.message); }
+  finally{
     els.btnStart.disabled = false; imageFiles = []; renderImagePreview(); els.notes.value='';
   }
 });
 
-/* Previous area */
 els.btnPrevious.addEventListener('click', async ()=>{
   await loadConferences(els.prevConf);
   if(els.prevConf.value) await loadVendorsForConference(els.prevConf.value, els.prevVendor);
   document.querySelectorAll('h2')[1]?.scrollIntoView({behavior:'smooth'});
 });
-els.prevConf.addEventListener('change', async ()=>{ await loadVendorsForConference(els.prevConf.value, els.prevVendor); });
-els.btnLoadSessions.addEventListener('click', async ()=>{
-  els.prevList.innerHTML = '<div class="section"><em>Loading…</em></div>';
-  try{ await loadPrevious(els.prevConf.value || null, els.prevVendor.value || null); }
-  catch(e){ els.prevList.innerHTML = `<div class="section"><strong>Error:</strong> ${escapeHtml(e.message)}</div>`; }
-});
 
-/* Dialog Esc handling */
+/* Closeable dialogs with Esc */
 for(const d of [els.authDialog, els.confDialog, els.vendorDialog, els.detailDialog, els.logsDialog, els.selfTestDialog]){
   d?.addEventListener('cancel', e=>{ e.preventDefault(); d.close(); });
 }
@@ -992,17 +945,14 @@ for(const d of [els.authDialog, els.confDialog, els.vendorDialog, els.detailDial
 /* Boot */
 async function boot(){
   if(!store.api){
-    // Pre-fill with the base from your last logs; change anytime in API settings.
     store.api = {
       url: 'https://495c2d21-c9d4-4b7a-a885-9e9b22d936af-00-3kg4e5ukszg8i.riker.replit.dev/api',
-      key: '', // paste yours in the API dialog
-      mode: 'xapikey',
-      param: 'apiKey'
+      key: '', mode: 'xapikey', param: 'apiKey'
     };
   }
   const cfg = store.api;
   if(cfg){
-    setConnected(true);
+    els.apiStatus.textContent = 'Connected';
     try{
       await loadConferences(els.confSelect);
       if(els.confSelect.value) await loadVendorsForConference(els.confSelect.value, els.vendorSelect);
@@ -1010,11 +960,9 @@ async function boot(){
       if(els.prevConf.value) await loadVendorsForConference(els.prevConf.value, els.prevVendor);
       log('Dropdowns populated from API.');
       if(!els.confSelect.options.length) log('No conferences yet. You can record without selecting; we’ll use “Unknown Conference”.', 'warn');
-    }catch(e){
-      log('Could not load initial data: ' + e.message, 'error');
-    }
+    }catch(e){ log('Could not load initial data: ' + e.message, 'error'); }
   }else{
-    setConnected(false);
+    els.apiStatus.textContent = 'Disconnected';
     els.authDialog.showModal();
   }
 }
