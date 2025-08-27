@@ -266,7 +266,7 @@ import {
   listConferences, listVendorsForConference, listAllVendors,
   createConference, createVendor, ensureConferenceVendor,
   uploadSession, getSession, getSessionReport, listSessionsForVendor,
-  runSelfTest, todayISO
+  runSelfTest, todayISO, testConnectivity
 } from './cb-api.js';
 
 /* ----- UI refs ----- */
@@ -344,10 +344,7 @@ onLog((entry)=>{
   const msg = entry.msg || '';
   const extra = entry.extra ? ` ${entry.extra}` : '';
   appendStatus(`[${time}] [${label}] ${msg}${extra}`);
-  if (els.logVerbosity.value === 'verbose'){
-    // refresh live logs only in verbose to avoid spam; button opens anyway
-    showLogs();
-  }
+  if (els.logVerbosity.value === 'verbose'){ showLogs(); }
 });
 function showLogs(){
   const verbose = els.logVerbosity.value === 'verbose';
@@ -494,187 +491,197 @@ async function openSessionDetail(sessionId){
   const ocr = report?.imageOcr || report?.ocr || null;
   const transcript = report?.transcript || report?.transcription || null;
   const summary = report?.summary || null;
-  const textField = meta?.text || report?.notes || null; // stored text
+  const textField = meta?.text || report?.notes || null;
 
+  const esc = s => String(s).replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
   const imgHtml = (images && images.length) ? `<div class="preview">${images.map(u=>`<img src="${u}" class="thumb" alt="image">`).join('')}</div>` : `<em class="muted">No images</em>`;
   const filesHtml = (files && files.length) ? `<ul>${files.map(f=>`<li><a href="${f.url||f.href||'#'}" target="_blank" rel="noopener">${f.name||f.filename||f.url||'file'}</a></li>`).join('')}</ul>` : `<em class="muted">No files</em>`;
 
-  els.detailContainer.innerHTML = `
+  document.getElementById('detailContainer').innerHTML = `
     <div class="row" style="justify-content:space-between;align-items:center">
       <h2 style="margin:0">Session ${sessionId}</h2>
       <button class="ghost" onclick="document.getElementById('detailDialog').close()">Close</button>
     </div>
     <div class="grid2">
       <div class="section"><strong>Files</strong>${filesHtml}</div>
-      <div class="section"><strong>Transcript</strong><pre class="status" style="max-height:180px">${transcript ? String(transcript).replace(/[&<>"']/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s])) : '—'}</pre></div>
+      <div class="section"><strong>Transcript</strong><pre class="status" style="max-height:180px">${transcript ? esc(transcript) : '—'}</pre></div>
     </div>
-    <div class="section"><strong>Image OCR</strong><pre class="status" style="max-height:180px">${ocr ? (typeof ocr==='string'? ocr : JSON.stringify(ocr,null,2)).replace(/[&<>"']/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s])) : '—'}</pre></div>
+    <div class="section"><strong>Image OCR</strong><pre class="status" style="max-height:180px">${ocr ? esc(typeof ocr==='string'? ocr : JSON.stringify(ocr,null,2)) : '—'}</pre></div>
     <div class="section"><strong>Images</strong>${imgHtml}</div>
     <div class="grid2">
-      <div class="section"><strong>Notes</strong><pre class="status" style="max-height:140px">${textField ? String(textField).replace(/[&<>"']/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s])) : '—'}</pre></div>
-      <div class="section"><strong>Summary</strong><pre class="status" style="max-height:140px">${summary ? String(summary).replace(/[&<>"']/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s])) : '—'}</pre></div>
+      <div class="section"><strong>Notes</strong><pre class="status" style="max-height:140px">${textField ? esc(textField) : '—'}</pre></div>
+      <div class="section"><strong>Summary</strong><pre class="status" style="max-height:140px">${summary ? esc(summary) : '—'}</pre></div>
     </div>`;
-  els.detailDialog.showModal();
+  document.getElementById('detailDialog').showModal();
 }
 
 /* ----- Top toolbar buttons ----- */
-els.btnOpenAuth.addEventListener('click', ()=>{
+document.getElementById('btnOpenAuth').addEventListener('click', ()=>{
   const cfg = getConfig() || { url:'https://conference-buddy-geoutils.replit.app/api', key:'', mode:'xapikey', param:'apiKey' };
-  els.apiUrl.value = cfg.url || '';
-  els.apiKey.value = cfg.key || '';
-  els.authMode.value = cfg.mode || 'xapikey';
-  els.authParam.value = cfg.param || 'apiKey';
-  els.authDialog.showModal();
+  document.getElementById('apiUrl').value = cfg.url || '';
+  document.getElementById('apiKey').value = cfg.key || '';
+  document.getElementById('authMode').value = cfg.mode || 'xapikey';
+  document.getElementById('authParam').value = cfg.param || 'apiKey';
+  document.getElementById('authDialog').showModal();
 });
-els.btnCloseAuth.addEventListener('click', ()=> els.authDialog.close());
-els.btnSave.addEventListener('click', ()=>{
-  const url = els.apiUrl.value.trim();
-  const key = els.apiKey.value.trim();
-  const mode = els.authMode.value;
-  const param = (els.authParam.value.trim() || 'apiKey');
+document.getElementById('btnCloseAuth').addEventListener('click', ()=> document.getElementById('authDialog').close());
+document.getElementById('btnSave').addEventListener('click', ()=>{
+  const url = document.getElementById('apiUrl').value.trim();
+  const key = document.getElementById('apiKey').value.trim();
+  const mode = document.getElementById('authMode').value;
+  const param = (document.getElementById('authParam').value.trim() || 'apiKey');
   if(!url || !key){ alert('Please enter API base URL and API key.'); return; }
   setConfig({ url, key, mode, param });
-  els.apiStatus.textContent = 'Connected';
-  els.authDialog.close();
+  document.getElementById('apiStatus').textContent = 'Connected';
+  document.getElementById('authDialog').close();
   boot();
 });
-els.btnTest.addEventListener('click', async ()=>{
+document.getElementById('btnTest').addEventListener('click', async ()=>{
   try{
-    await api.testConnectivity();
+    await testConnectivity();
     alert('Connection OK (OPTIONS + GETs succeeded). Check Logs for details.');
   }catch(e){ alert('Connection failed: ' + e.message); }
 });
 
-els.btnLogs.addEventListener('click', ()=>{ showLogs(); els.logsDialog.showModal(); });
-els.btnCloseLogs.addEventListener('click', ()=> els.logsDialog.close());
-els.logVerbosity.addEventListener('change', showLogs);
-els.btnCopyLogs.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(els.logsView.textContent || ''); alert('Logs copied'); } catch(_){ alert('Copy failed. Select text and copy.'); } });
-els.btnDownloadTxt.addEventListener('click', ()=> downloadBlob('cb-logs.txt', new Blob([els.logsView.textContent||''], {type:'text/plain'})));
-els.btnDownloadJson.addEventListener('click', ()=> downloadBlob('cb-logs.json', new Blob([JSON.stringify(getLogs(),null,2)], {type:'application/json'})));
+document.getElementById('btnLogs').addEventListener('click', ()=>{ showLogs(); document.getElementById('logsDialog').showModal(); });
+document.getElementById('btnCloseLogs').addEventListener('click', ()=> document.getElementById('logsDialog').close());
+document.getElementById('logVerbosity').addEventListener('change', showLogs);
+document.getElementById('btnCopyLogs').addEventListener('click', async ()=>{
+  try{ await navigator.clipboard.writeText(document.getElementById('logsView').textContent || ''); alert('Logs copied'); } catch(_){ alert('Copy failed. Select text and copy.'); }
+});
+document.getElementById('btnDownloadTxt').addEventListener('click', ()=>{
+  const txt = document.getElementById('logsView').textContent || '';
+  const blob = new Blob([txt], {type:'text/plain'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='cb-logs.txt'; a.click();
+});
+document.getElementById('btnDownloadJson').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(getLogs(),null,2)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='cb-logs.json'; a.click();
+});
 
-els.btnSelfTest.addEventListener('click', ()=> { els.selfTestOutput.textContent=''; els.selfTestDialog.showModal(); });
-els.btnCloseSelfTest.addEventListener('click', ()=> els.selfTestDialog.close());
-els.btnRunSelfTest.addEventListener('click', async ()=>{
-  els.selfTestOutput.textContent = '';
+document.getElementById('btnSelfTest').addEventListener('click', ()=> { document.getElementById('selfTestOutput').textContent=''; document.getElementById('selfTestDialog').showModal(); });
+document.getElementById('btnCloseSelfTest').addEventListener('click', ()=> document.getElementById('selfTestDialog').close());
+document.getElementById('btnRunSelfTest').addEventListener('click', async ()=>{
+  const outEl = document.getElementById('selfTestOutput'); outEl.textContent = '';
   try{
     const out = await runSelfTest();
-    els.selfTestOutput.textContent = out.join('\n');
+    outEl.textContent = out.join('\n');
   }catch(e){
-    els.selfTestOutput.textContent = '✖ Self-Test failed: ' + e.message + ' — check Logs for details.';
+    outEl.textContent = '✖ Self-Test failed: ' + e.message + ' — check Logs for details.';
   }
 });
 
 /* ----- New conf/vendor ----- */
-els.btnAddConf.addEventListener('click', ()=> els.confDialog.showModal());
-els.btnAddVendor.addEventListener('click', async ()=>{ await populateConferences(els.newVendorConf); els.vendorDialog.showModal(); });
+document.getElementById('btnAddConf').addEventListener('click', ()=> document.getElementById('confDialog').showModal());
+document.getElementById('btnAddVendor').addEventListener('click', async ()=>{
+  await populateConferences(document.getElementById('newVendorConf'));
+  document.getElementById('vendorDialog').showModal();
+});
 
-els.btnCreateConf.addEventListener('click', async ()=>{
+document.getElementById('btnCreateConf').addEventListener('click', async ()=>{
   try{
-    const name = els.newConfName.value.trim(); if(!name) return alert('Please enter a conference name.');
-    const sd = els.newConfStart.value || todayISO(); const ed = els.newConfEnd.value || sd;
+    const name = document.getElementById('newConfName').value.trim(); if(!name) return alert('Please enter a conference name.');
+    const sd = document.getElementById('newConfStart').value || todayISO(); const ed = document.getElementById('newConfEnd').value || sd;
     const created = await createConference({ name, start_date: sd, end_date: ed });
     api.log('Conference created: ' + (created?.id || created?.name || 'ok'));
-    els.confDialog.close();
-    await populateConferences(els.confSelect);
+    document.getElementById('confDialog').close();
+    await populateConferences(document.getElementById('confSelect'));
     const cid = created?.id ?? created?._id ?? created?.uuid ?? created?.conferenceId;
-    if(cid) els.confSelect.value = cid;
-    await populateVendorsForConference(els.confSelect.value, els.vendorSelect);
+    if(cid) document.getElementById('confSelect').value = cid;
+    await populateVendorsForConference(document.getElementById('confSelect').value, document.getElementById('vendorSelect'));
   }catch(e){ alert('Create conference failed: ' + e.message); }
 });
-els.btnCreateVendor.addEventListener('click', async ()=>{
+document.getElementById('btnCreateVendor').addEventListener('click', async ()=>{
   try{
-    const name = els.newVendorName.value.trim(); const confId = els.newVendorConf.value;
+    const name = document.getElementById('newVendorName').value.trim(); const confId = document.getElementById('newVendorConf').value;
     if(!name || !confId) return alert('Enter vendor name and select a conference.');
     const created = await createVendor({ name, conference_id: confId });
     api.log('Vendor created: ' + (created?.id || created?.name || 'ok'));
-    els.vendorDialog.close();
-    if(els.confSelect.value) await populateVendorsForConference(els.confSelect.value, els.vendorSelect);
+    document.getElementById('vendorDialog').close();
+    if(document.getElementById('confSelect').value) await populateVendorsForConference(document.getElementById('confSelect').value, document.getElementById('vendorSelect'));
     const vid = created?.id ?? created?._id ?? created?.uuid ?? created?.vendorId;
-    if(vid) els.vendorSelect.value = vid;
+    if(vid) document.getElementById('vendorSelect').value = vid;
   }catch(e){ alert('Create vendor failed: ' + e.message); }
 });
 
-els.confSelect.addEventListener('change', async ()=>{ await populateVendorsForConference(els.confSelect.value, els.vendorSelect); });
-
-/* ----- Start/Stop & Upload ----- */
-els.btnStart.addEventListener('click', async ()=>{
-  if(!getConfig()) { return alert('Configure API first.'); }
-  els.btnStart.disabled = true; els.btnStop.disabled = false;
-  try{ await startRecording(); api.log('Session started. Recording in progress.'); }
-  catch(e){ els.btnStart.disabled=false; els.btnStop.disabled=true; alert('Cannot start recording: ' + e.message); }
+document.getElementById('confSelect').addEventListener('change', async ()=>{
+  await populateVendorsForConference(document.getElementById('confSelect').value, document.getElementById('vendorSelect'));
 });
 
-els.btnStop.addEventListener('click', async ()=>{
-  els.btnStop.disabled = true;
+document.getElementById('imageInput').addEventListener('change', (e)=>{ 
+  const files = Array.from(e.target.files || []); 
+  imageFiles = imageFiles.concat(files); 
+  renderImagePreview(); 
+});
+
+/* ----- Start/Stop & Upload ----- */
+document.getElementById('btnStart').addEventListener('click', async ()=>{
+  if(!getConfig()) { return alert('Configure API first.'); }
+  document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false;
+  try{ await startRecording(); api.log('Session started. Recording in progress.'); }
+  catch(e){ document.getElementById('btnStart').disabled=false; document.getElementById('btnStop').disabled=true; alert('Cannot start recording: ' + e.message); }
+});
+
+document.getElementById('btnStop').addEventListener('click', async ()=>{
+  document.getElementById('btnStop').disabled = true;
   try{
     const audioBlob = await stopRecordingGetBlob();
     if(!audioBlob) throw new Error('No audio captured.');
 
-    let conferenceId = els.confSelect.value || null;
-    let vendorId = els.vendorSelect.value || null;
+    let conferenceId = document.getElementById('confSelect').value || null;
+    let vendorId = document.getElementById('vendorSelect').value || null;
 
-    // Ensure conference & vendor
     ({ conferenceId, vendorId } = await ensureConferenceVendor({ conferenceId, vendorId, preferredVendorName: 'Unknown Vendor' }));
 
-    // Build payload (API module handles mapping & fallback)
     const sessionId = await uploadSession({
       audioBlob,
       images: imageFiles,
-      text: els.notes.value, // IMPORTANT: pass as text (not notes)
+      text: document.getElementById('notes').value, // IMPORTANT: pass as text
       conferenceId,
       vendorId,
       startIso: sessionStartIso || new Date().toISOString(),
       endIso: sessionEndIso || sessionStartIso || new Date().toISOString()
     });
 
-    els.pillSession.textContent = sessionId;
+    document.getElementById('pillSession').textContent = sessionId;
     alert('Uploaded! Session ID: ' + sessionId + '\nEnrichment started.');
   }catch(e){ alert('Upload failed: ' + e.message); }
   finally{
-    els.btnStart.disabled = false; imageFiles = []; renderImagePreview(); els.notes.value=''; resetRecording();
+    document.getElementById('btnStart').disabled = false; imageFiles = []; renderImagePreview(); document.getElementById('notes').value=''; resetRecording();
   }
 });
 
 /* ----- Previous sessions ----- */
-els.btnPrevious.addEventListener('click', async ()=>{
-  await populateConferences(els.prevConf);
-  if(els.prevConf.value) await populateVendorsForConference(els.prevConf.value, els.prevVendor);
+document.getElementById('btnPrevious').addEventListener('click', async ()=>{
+  await populateConferences(document.getElementById('prevConf'));
+  if(document.getElementById('prevConf').value) await populateVendorsForConference(document.getElementById('prevConf').value, document.getElementById('prevVendor'));
   document.querySelectorAll('h2')[1]?.scrollIntoView({behavior:'smooth'});
 });
-els.prevConf.addEventListener('change', async ()=>{
-  await populateVendorsForConference(els.prevConf.value, els.prevVendor);
+document.getElementById('prevConf').addEventListener('change', async ()=>{
+  await populateVendorsForConference(document.getElementById('prevConf').value, document.getElementById('prevVendor'));
 });
-els.btnLoadSessions.addEventListener('click', async ()=>{
-  await loadPrevious(els.prevConf.value || null, els.prevVendor.value || null);
+document.getElementById('btnLoadSessions').addEventListener('click', async ()=>{
+  await loadPrevious(document.getElementById('prevConf').value || null, document.getElementById('prevVendor').value || null);
 });
-
-/* ----- Logs dialog buttons ----- */
-els.logVerbosity.addEventListener('change', showLogs);
-els.btnCopyLogs.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(els.logsView.textContent || ''); alert('Logs copied'); } catch(_){ alert('Copy failed. Select text and copy.'); } });
 
 /* ----- Dialogs esc-close ----- */
-for(const d of [els.authDialog, els.confDialog, els.vendorDialog, els.detailDialog, els.logsDialog, els.selfTestDialog]){
-  d?.addEventListener('cancel', e=>{ e.preventDefault(); d.close(); });
+for(const id of ['authDialog','confDialog','vendorDialog','detailDialog','logsDialog','selfTestDialog']){
+  const d = document.getElementById(id); d?.addEventListener('cancel', e=>{ e.preventDefault(); d.close(); });
 }
 
 /* ----- Boot ----- */
 async function boot(){
   const cfg = getConfig() || { url: 'https://conference-buddy-geoutils.replit.app/api', key: '', mode:'xapikey', param:'apiKey' };
   setConfig(cfg);
-  els.apiStatus.textContent = cfg.key ? 'Connected' : 'Disconnected';
+  document.getElementById('apiStatus').textContent = cfg.key ? 'Connected' : 'Disconnected';
   try{
-    await populateConferences(els.confSelect);
-    if(els.confSelect.value) await populateVendorsForConference(els.confSelect.value, els.vendorSelect);
-    await populateConferences(els.prevConf);
-    if(els.prevConf.value) await populateVendorsForConference(els.prevConf.value, els.prevVendor);
+    await populateConferences(document.getElementById('confSelect'));
+    if(document.getElementById('confSelect').value) await populateVendorsForConference(document.getElementById('confSelect').value, document.getElementById('vendorSelect'));
+    await populateConferences(document.getElementById('prevConf'));
+    if(document.getElementById('prevConf').value) await populateVendorsForConference(document.getElementById('prevConf').value, document.getElementById('prevVendor'));
     api.log('Dropdowns populated from API.');
-    if(!els.confSelect.options.length || !els.confSelect.value) api.log('No conference selected. You can record without selecting; we’ll use “Unknown Conference”.', 'warn');
+    if(!document.getElementById('confSelect').options.length || !document.getElementById('confSelect').value) api.log('No conference selected. You can record without selecting; we’ll use “Unknown Conference”.', 'warn');
   }catch(e){ api.log('Could not load initial data: ' + e.message, 'error'); }
 }
 boot();
 </script>
-
-<!-- API module -->
-<script type="module" src="./cb-api.js"></script>
 </body>
-  </html>
+</html>
