@@ -337,7 +337,10 @@ const els = {
 };
 
 /* ----- Logging UI wiring ----- */
-function appendStatus(line){ els.status.textContent += (els.status.textContent?'\n':'') + line; els.status.scrollTop = els.status.scrollHeight; }
+function appendStatus(line){
+  els.status.textContent += (els.status.textContent?'\n':'') + line;
+  els.status.scrollTop = els.status.scrollHeight;
+}
 onLog((entry)=>{
   const time = new Date(entry.t).toLocaleTimeString();
   const label = (entry.level||'info').toUpperCase();
@@ -351,7 +354,10 @@ function showLogs(){
   const text = getLogs().map(l=> verbose ? JSON.stringify(l, null, 2) : `${l.t} [${(l.level||'info').toUpperCase()}] ${l.msg}${l.extra?(' '+l.extra):''}`).join('\n');
   els.logsView.textContent = text || '(no logs yet)';
 }
-function downloadBlob(name, blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},0); }
+function downloadBlob(name, blob){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},0);
+}
 
 /* ----- Helpers for dropdowns ----- */
 function insertNoneOption(selectEl, label='— None —'){
@@ -438,7 +444,10 @@ function renderImagePreview(){
   });
   els.pillImages.textContent = String(imageFiles.length);
 }
-els.imageInput.addEventListener('change', (e)=>{ imageFiles = imageFiles.concat(Array.from(e.target.files || [])); renderImagePreview(); });
+els.imageInput.addEventListener('change', (e)=>{
+  imageFiles = imageFiles.concat(Array.from(e.target.files || []));
+  renderImagePreview();
+});
 
 /* ----- Previous sessions ----- */
 async function loadPrevious(conferenceId, vendorId){
@@ -606,15 +615,10 @@ document.getElementById('confSelect').addEventListener('change', async ()=>{
   await populateVendorsForConference(document.getElementById('confSelect').value, document.getElementById('vendorSelect'));
 });
 
-document.getElementById('imageInput').addEventListener('change', (e)=>{ 
-  const files = Array.from(e.target.files || []); 
-  imageFiles = imageFiles.concat(files); 
-  renderImagePreview(); 
-});
-
 /* ----- Start/Stop & Upload ----- */
 document.getElementById('btnStart').addEventListener('click', async ()=>{
-  if(!getConfig()) { return alert('Configure API first.'); }
+  const cfg = getConfig();
+  if(!cfg || !cfg.url || !cfg.key) { return alert('Configure API first.'); }
   document.getElementById('btnStart').disabled = true; document.getElementById('btnStop').disabled = false;
   try{ await startRecording(); api.log('Session started. Recording in progress.'); }
   catch(e){ document.getElementById('btnStart').disabled=false; document.getElementById('btnStop').disabled=true; alert('Cannot start recording: ' + e.message); }
@@ -634,7 +638,7 @@ document.getElementById('btnStop').addEventListener('click', async ()=>{
     const sessionId = await uploadSession({
       audioBlob,
       images: imageFiles,
-      text: document.getElementById('notes').value, // IMPORTANT: pass as text
+      notes: document.getElementById('notes').value, // IMPORTANT: pass as notes (KB)
       conferenceId,
       vendorId,
       startIso: sessionStartIso || new Date().toISOString(),
@@ -683,8 +687,5 @@ async function boot(){
 }
 boot();
 </script>
-<script src="cb-api.js?v=7" defer></script>
-<!-- <script src="app.js?v=1" defer></script> <!-- if you split; otherwise leave your inline script -->
-
 </body>
 </html>
