@@ -20,7 +20,6 @@ function pushLog(entry){
   const item = { t: new Date().toISOString(), ...entry };
   logs.push(item); if(logs.length > LOG_CAP) logs.shift();
   logSubscribers.forEach(fn => { try{ fn(item); }catch{} });
-  // Console mirror (level-aware)
   const fn = item.level==='error'?'error':(item.level==='warn'?'warn':'log');
   console[fn](item);
 }
@@ -93,12 +92,11 @@ async function apiFetch(path, opts={}){
     if(ct.includes('application/json')) return res.json();
     return res.blob();
   }catch(e){
-    // Multipart -> JSON fallback for media-type errors
     const isUnsupported = e?.status === 415 || (e?.status === 500 && String(e.body||'').includes("Unsupported Media Type"));
     if (isUnsupported && opts.body instanceof FormData && path.includes('/sessions/upload')) {
       try {
         const asJson = await formDataToJsonPayload(opts.body);
-        if ('notes' in asJson) delete asJson.notes; // final safety
+        if ('notes' in asJson) delete asJson.notes;
         log('Server rejected multipart for /sessions/upload. Retrying with JSON payload (base64 + timing)…','warn');
         return await apiFetch(path, { ...opts, body: JSON.stringify(asJson) });
       } catch(re){ log('Retry-as-JSON failed to construct payload: ' + re.message, 'error'); }
@@ -126,14 +124,12 @@ async function formDataToJsonPayload(fd){
       plain[k] = v;
     }
   }
-
-  // 🚫 never allow a `notes` key to survive
-  if ('notes' in plain) delete plain.notes;
+  if ('notes' in plain) delete plain.notes; // 🚫 never allow notes to survive
 
   // explicit mapping
   const conference_id = plain.conference_id || plain.conferenceId || '';
   const vendor_id     = plain.vendor_id || plain.vendorId || '';
-  const text          = plain.text || ''; // already mapped
+  const text          = plain.text || '';
   const start_time    = plain.start_time || plain.startTime || '';
   const end_time      = plain.end_time || plain.endTime || '';
   const duration      = plain.duration_seconds || plain.durationSeconds || '';
@@ -145,7 +141,7 @@ async function formDataToJsonPayload(fd){
   if (end_time){      payload.end_time      = end_time;      payload.endTime      = end_time; }
   if (duration){      payload.duration_seconds = duration;   payload.durationSeconds = duration; }
 
-  if ('notes' in payload) delete payload.notes; // belt & braces
+  if ('notes' in payload) delete payload.notes;
   return payload;
 }
 
@@ -234,12 +230,10 @@ async function uploadSession({ audioBlob, images, text, conferenceId, vendorId, 
   fd.append('end_time', endIso);            fd.append('endTime', endIso);
   fd.append('duration_seconds', String(duration)); fd.append('durationSeconds', String(duration));
 
-  // Try multipart first, fallback handled in apiFetch
   const res = await apiFetch('/sessions/upload', { method:'POST', body: fd });
   const sessionId = res.id ?? res.sessionId ?? res._id ?? res.uuid;
   if(!sessionId) throw new Error('Upload succeeded but response did not include a session ID.');
 
-  // Trigger enrichment (non-fatal if it fails)
   try{ await apiFetch(`/sessions/${encodeURIComponent(sessionId)}/enrich`, { method:'POST' }); log('Enrichment triggered.'); }
   catch(e){ log(`Warning: could not trigger enrichment automatically — ${e.message}`,'warn'); }
 
@@ -318,6 +312,12 @@ async function runSelfTest(){
   return out;
 }
 
+// ---------- Small convenience namespace ----------
+// Define BEFORE exporting (prevents evaluation-time ReferenceError)
+const api = {
+  log, testConnectivity
+};
+
 // ---------- API export surface ----------
 export {
   // config & utils
@@ -332,13 +332,8 @@ export {
   ensureConferenceVendor,
   uploadSession, listSessionsForVendor, getSession, getSessionReport,
   runSelfTest,
-  // namespace-like export for quick use
-  // (exposes log/testConnectivity for UI convenience)
-  // eslint-disable-next-line no-object-literal-type-assertion
-  api as default
+  // convenience
+  api
 };
-
-// Simple namespace-like object for convenience imports in index.html
-const api = {
-  log, testConnectivity
-};
+// also export default for flexibility
+export default api;
