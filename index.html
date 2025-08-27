@@ -40,12 +40,12 @@
   button:disabled{opacity:.6;cursor:not-allowed}
   .section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px}
   .section h2{margin:.2rem 0 8px;font-size:16px;color:#d7e5ff}
-  label{font-size:12px;color:var(--muted);display:block;margin:6px 0 6px}
+  label{font-size:12px;color:#9bb3e0;display:block;margin:6px 0 6px}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .pill{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;background:#0d2048;border:1px solid var(--border);border-radius:999px;color:#bcd1ff;font-size:12px}
   .status{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;background:#0b152c;border:1px solid var(--border);border-radius:12px;padding:10px;max-height:40vh;overflow:auto}
-  .muted{color:var(--muted)}
+  .muted{color:#9bb3e0}
   .thumb{width:88px;height:88px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
   .thumbwrap{position:relative}
   .removebtn{position:absolute;top:4px;right:4px;background:#0008;border:1px solid var(--border);color:#fff;border-radius:999px;padding:2px 6px;font-size:12px}
@@ -216,7 +216,7 @@
       <button id="btnCloseSelfTest" class="ghost">Close</button>
     </div>
   </div>
-  <p class="muted">Runs: OPTIONS probe, /health, list/create conference (JSON), list/create vendor (JSON), upload (multipart), enrich, fetch session/report. Uses your configured URL + key.</p>
+  <p class="muted">Runs: OPTIONS probe, /health, list/create conference (JSON w/ dates), list/create vendor (JSON w/ conference_id), upload (multipart), enrich, fetch session/report. Uses your configured URL + key.</p>
   <div id="selfTestOutput" class="dialog-status" style="min-height:220px;max-height:60vh"></div>
 </div></dialog>
 
@@ -227,7 +227,10 @@
     <button class="ghost" onclick="document.getElementById('confDialog').close()">Close</button>
   </div>
   <label>Name</label><input id="newConfName" placeholder="e.g., DEF CON 33" />
-  <label>Start Date (optional)</label><input id="newConfDate" type="date" />
+  <div class="grid2">
+    <div><label>Start Date</label><input id="newConfStart" type="date" /></div>
+    <div><label>End Date</label><input id="newConfEnd" type="date" /></div>
+  </div>
   <div class="row" style="justify-content:flex-end;margin-top:8px">
     <button id="btnCreateConf" class="primary">Create</button>
   </div>
@@ -295,7 +298,8 @@ const els = {
 
   confDialog: document.getElementById('confDialog'),
   newConfName: document.getElementById('newConfName'),
-  newConfDate: document.getElementById('newConfDate'),
+  newConfStart: document.getElementById('newConfStart'),
+  newConfEnd: document.getElementById('newConfEnd'),
   btnCreateConf: document.getElementById('btnCreateConf'),
 
   vendorDialog: document.getElementById('vendorDialog'),
@@ -427,7 +431,7 @@ async function apiFetch(path, opts={}){
   const baseUrl = joinUrl(cfg.url, path);
   const url = applyAuthToUrl(baseUrl, mode, key, paramName);
   const headers = { ...(opts.headers||{}), ...buildAuthHeaders(mode, key) };
-  // Set JSON Content-Type only if body is a string (assumed JSON)
+  // JSON if body is a string
   if (opts.body && typeof opts.body === 'string' && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
 
   const ctx = netStart({ method, url, headers, paramName });
@@ -436,7 +440,7 @@ async function apiFetch(path, opts={}){
     const res = await fetch(url, { method, headers, body: opts.body || undefined, mode:'cors', credentials:'omit' });
     const ct = (res.headers.get('content-type') || '').toLowerCase();
 
-    // Build a body sample for logs
+    // Body sample for logs
     let bodySample = null;
     try{
       if (ct.includes('application/json')) {
@@ -449,7 +453,7 @@ async function apiFetch(path, opts={}){
         const blob = await res.clone().blob();
         bodySample = `[blob ${blob.type || 'application/octet-stream'} ${blob.size} bytes]`;
       }
-    }catch{ /* ignore sampling errors */ }
+    }catch{}
 
     netEnd(ctx, res, bodySample);
 
@@ -461,7 +465,7 @@ async function apiFetch(path, opts={}){
     if(ct.includes('application/json')) return res.json();
     return res.blob();
   }catch(e){
-    // OPTIONAL 415 auto-retry from FormData -> JSON when safe (no blobs)
+    // Optional 415 recovery (FormData->JSON if safe)
     if (e?.status === 415 && opts.body instanceof FormData) {
       try {
         const obj = {}; let hasBlob = false;
@@ -477,10 +481,20 @@ async function apiFetch(path, opts={}){
   }
 }
 
+/* --- Helpers for API list shapes --- */
+function asArray(maybe){
+  if (Array.isArray(maybe)) return maybe;
+  if (maybe && typeof maybe === 'object') {
+    if (Array.isArray(maybe.data)) return maybe.data;
+    if (Array.isArray(maybe.items)) return maybe.items;
+  }
+  return [];
+}
+
 /* --- Dropdowns --- */
 async function loadConferences(selectEl){
   const resp = await apiFetch('/conferences');
-  const list = Array.isArray(resp) ? resp : (resp?.data || resp?.items || []);
+  const list = asArray(resp);
   selectEl.innerHTML = '';
   for(const c of list){
     const opt = document.createElement('option');
@@ -493,8 +507,9 @@ async function loadVendorsForConference(confId, selectEl){
   selectEl.innerHTML = '';
   if(!confId) return;
   try{
-    const list = await apiFetch(`/conferences/${encodeURIComponent(confId)}/vendors`);
-    for(const v of list || []){
+    const resp = await apiFetch(`/conferences/${encodeURIComponent(confId)}/vendors`);
+    const list = asArray(resp);
+    for(const v of list){
       const opt = document.createElement('option');
       opt.value = v.id ?? v._id ?? v.uuid ?? v.vendorId;
       opt.textContent = v.name ?? (`Vendor ${opt.value}`);
@@ -502,8 +517,9 @@ async function loadVendorsForConference(confId, selectEl){
     }
   }catch(e){
     log(`Warn: couldn't load vendors for conference — ${e.message}. Falling back to /vendors`, 'warn');
-    const list = await apiFetch('/vendors');
-    for(const v of list || []){
+    const resp = await apiFetch('/vendors');
+    const list = asArray(resp);
+    for(const v of list){
       const opt = document.createElement('option');
       opt.value = v.id ?? v._id ?? v.uuid ?? v.vendorId;
       opt.textContent = v.name ?? (`Vendor ${opt.value}`);
@@ -512,7 +528,8 @@ async function loadVendorsForConference(confId, selectEl){
   }
 }
 
-/* --- Unknown placeholders (JSON create) --- */
+/* --- Unknown placeholders (JSON create w/ required dates) --- */
+function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
 async function ensureUnknowns(){
   const cached = store.unknown;
   if(cached?.conferenceId && cached?.vendorId) return cached;
@@ -520,14 +537,15 @@ async function ensureUnknowns(){
   let confId = null, vendorId = null;
   try{
     const conferences = await apiFetch('/conferences');
-    const list = Array.isArray(conferences) ? conferences : (conferences?.data || conferences?.items || []);
+    const list = asArray(conferences);
     const unk = (list||[]).find(c => (c.name||'').toLowerCase() === 'unknown conference');
     if(unk) confId = unk.id ?? unk._id ?? unk.uuid ?? unk.conferenceId;
   }catch(e){ log('Could not list conferences while searching for Unknown Conference: '+e.message,'warn'); }
 
   if(!confId){
     try{
-      const created = await apiFetch('/conferences', { method:'POST', body: JSON.stringify({ name: 'Unknown Conference' }) });
+      const payload = { name: 'Unknown Conference', start_date: todayISO(), end_date: todayISO() };
+      const created = await apiFetch('/conferences', { method:'POST', body: JSON.stringify(payload) });
       confId = created?.id ?? created?._id ?? created?.uuid ?? created?.conferenceId;
       log(`Created Unknown Conference: ${confId}`);
     }catch(e){ log('Failed to create Unknown Conference: '+e.message,'error'); throw e; }
@@ -535,13 +553,14 @@ async function ensureUnknowns(){
 
   try{
     const vendors = await apiFetch(`/conferences/${encodeURIComponent(confId)}/vendors`);
-    const uv = (vendors||[]).find(v => (v.name||'').toLowerCase() === 'unknown vendor');
+    const list = asArray(vendors);
+    const uv = (list||[]).find(v => (v.name||'').toLowerCase() === 'unknown vendor');
     if(uv) vendorId = uv.id ?? uv._id ?? uv.uuid ?? uv.vendorId;
   }catch(e){ log('Could not list vendors for Unknown Conference: '+e.message,'warn'); }
 
   if(!vendorId){
     try{
-      const createdV = await apiFetch('/vendors', { method:'POST', body: JSON.stringify({ name: 'Unknown Vendor', conferenceId: confId }) });
+      const createdV = await apiFetch('/vendors', { method:'POST', body: JSON.stringify({ name: 'Unknown Vendor', conference_id: confId }) });
       vendorId = createdV?.id ?? createdV?._id ?? createdV?.uuid ?? createdV?.vendorId;
       log(`Created Unknown Vendor: ${vendorId}`);
     }catch(e){ log('Failed to create Unknown Vendor: '+e.message,'error'); throw e; }
@@ -596,8 +615,9 @@ async function uploadSession({audioBlob, images, notes, conferenceId, vendorId})
   if(audioBlob) fd.append('audio', audioBlob, `session.${(audioBlob.type.split('/')[1]||'webm').split(';')[0]}`);
   for(const f of images){ fd.append('images', f, f.name); }
   if(notes) fd.append('notes', notes);
-  if(conferenceId) fd.append('conferenceId', conferenceId);
-  if(vendorId) fd.append('vendorId', vendorId);
+  // Include both snake_case and camelCase for compatibility
+  if(conferenceId){ fd.append('conference_id', conferenceId); fd.append('conferenceId', conferenceId); }
+  if(vendorId){ fd.append('vendor_id', vendorId); fd.append('vendorId', vendorId); }
 
   const res = await apiFetch('/sessions/upload', { method:'POST', body: fd });
   const sessionId = res.id ?? res.sessionId ?? res._id ?? res.uuid;
@@ -617,16 +637,16 @@ async function loadPrevious(conferenceId, vendorId){
   async function forVendor(vid){
     try{
       const list = await apiFetch(`/vendors/${encodeURIComponent(vid)}/sessions`);
-      (list||[]).forEach(s=> sessions.push(s));
+      (Array.isArray(list)?list:asArray(list)).forEach(s=> sessions.push(s));
     }catch(e){ log(`Error loading sessions for vendor ${vid}: ${e.message}`,'error'); }
   }
   if(vendorId) await forVendor(vendorId);
   else if(conferenceId){
     const vendors = await apiFetch(`/conferences/${encodeURIComponent(conferenceId)}/vendors`);
-    for(const v of vendors || []){ const vid = v.id ?? v._id ?? v.vendorId ?? v.uuid; if(vid) await forVendor(vid); }
+    for(const v of asArray(vendors)){ const vid = v.id ?? v._id ?? v.vendorId ?? v.uuid; if(vid) await forVendor(vid); }
   }else{
     const allV = await apiFetch('/vendors');
-    for(const v of allV || []){ const vid = v.id ?? v._id ?? v.vendorId ?? v.uuid; if(vid) await forVendor(vid); }
+    for(const v of asArray(allV)){ const vid = v.id ?? v._id ?? v.vendorId ?? v.uuid; if(vid) await forVendor(vid); }
   }
 
   els.prevList.innerHTML = '';
@@ -634,7 +654,7 @@ async function loadPrevious(conferenceId, vendorId){
   for(const s of sessions){
     const sid = s.id ?? s.sessionId ?? s._id ?? s.uuid ?? '(unknown)';
     const status = s.status ?? s.state ?? 'uploaded';
-    const when = s.createdAt ? new Date(s.createdAt).toLocaleString() : '';
+    const when = s.created_at || s.createdAt ? new Date(s.created_at||s.createdAt).toLocaleString() : '';
     const div = document.createElement('div'); div.className='section';
     div.innerHTML = `
       <div class="row" style="justify-content:space-between;align-items:center">
@@ -720,22 +740,23 @@ async function runSelfTest(){
 
     // 3) list conferences
     const confs = await apiFetch('/conferences');
-    const confArr = Array.isArray(confs) ? confs : (confs?.data || confs?.items || []);
+    const confArr = asArray(confs);
     writeSelf(`GET /conferences ✓ (${confArr.length} found)`);
 
-    // 4) create temp conference (JSON)
+    // 4) create temp conference (JSON + required dates)
     const cname = 'CB SelfTest ' + new Date().toISOString();
+    const today = todayISO();
     const cRes = await apiFetch('/conferences', {
       method:'POST',
-      body: JSON.stringify({ name: cname })
+      body: JSON.stringify({ name: cname, start_date: today, end_date: today })
     });
     const cid = cRes.id ?? cRes._id ?? cRes.uuid ?? cRes.conferenceId;
     writeSelf(`POST /conferences ✓ id=${cid}`);
 
-    // 5) create vendor (JSON)
+    // 5) create vendor (JSON; use conference_id)
     const vRes = await apiFetch('/vendors', {
       method:'POST',
-      body: JSON.stringify({ name: 'CB SelfTest Vendor', conferenceId: cid })
+      body: JSON.stringify({ name: 'CB SelfTest Vendor', conference_id: cid })
     });
     const vid = vRes.id ?? vRes._id ?? vRes.uuid ?? vRes.vendorId;
     writeSelf(`POST /vendors ✓ id=${vid}`);
@@ -745,8 +766,8 @@ async function runSelfTest(){
     const upload = new FormData();
     upload.append('audio', silent, 'selftest.wav');
     upload.append('notes', 'Self-test upload at ' + new Date().toISOString());
-    upload.append('conferenceId', cid);
-    upload.append('vendorId', vid);
+    upload.append('conference_id', cid); upload.append('conferenceId', cid);
+    upload.append('vendor_id', vid); upload.append('vendorId', vid);
     const sRes = await apiFetch('/sessions/upload', { method:'POST', body: upload });
     const sid = sRes.id ?? sRes._id ?? sRes.uuid ?? sRes.sessionId;
     writeSelf(`POST /sessions/upload ✓ id=${sid}`);
@@ -767,7 +788,11 @@ async function runSelfTest(){
 
 /* --- Events --- */
 els.btnOpenAuth.addEventListener('click', ()=>{
-  const cfg = store.api || { url:'https://your-api-base', key:'', mode:'xapikey', param:'apiKey' };
+  // Prefill with the known-good Replit base from your logs
+  const cfg = store.api || {
+    url:'https://495c2d21-c9d4-4b7a-a885-9e9b22d936af-00-3kg4e5ukszg8i.riker.replit.dev/api',
+    key:'', mode:'xapikey', param:'apiKey'
+  };
   els.apiUrl.value = cfg.url || '';
   els.apiKey.value = cfg.key || '';
   els.authMode.value = cfg.mode || 'xapikey';
@@ -819,11 +844,13 @@ els.btnRunSelfTest.addEventListener('click', runSelfTest);
 els.btnAddConf.addEventListener('click', ()=> els.confDialog.showModal());
 els.btnAddVendor.addEventListener('click', async ()=>{ await loadConferences(els.newVendorConf); els.vendorDialog.showModal(); });
 
-/* CREATE AS JSON (fix for 415) */
+/* CREATE AS JSON (with required dates) */
 els.btnCreateConf.addEventListener('click', async ()=>{
   try{
     const name = els.newConfName.value.trim(); if(!name) return alert('Please enter a conference name.');
-    const payload = { name }; const d=els.newConfDate.value; if(d) payload.date = d;
+    const sd = els.newConfStart.value || todayISO();
+    const ed = els.newConfEnd.value || sd;
+    const payload = { name, start_date: sd, end_date: ed };
     const created = await apiFetch('/conferences', { method:'POST', body: JSON.stringify(payload) });
     log('Conference created: ' + (created?.id || created?.name || 'ok'));
     els.confDialog.close();
@@ -837,7 +864,7 @@ els.btnCreateVendor.addEventListener('click', async ()=>{
   try{
     const name = els.newVendorName.value.trim(); const confId = els.newVendorConf.value;
     if(!name || !confId) return alert('Enter vendor name and select a conference.');
-    const created = await apiFetch('/vendors', { method:'POST', body: JSON.stringify({ name, conferenceId: confId }) });
+    const created = await apiFetch('/vendors', { method:'POST', body: JSON.stringify({ name, conference_id: confId }) });
     log('Vendor created: ' + (created?.id || created?.name || 'ok'));
     els.vendorDialog.close();
     if(els.confSelect.value) await loadVendorsForConference(els.confSelect.value, els.vendorSelect);
@@ -910,10 +937,11 @@ for(const d of [els.authDialog, els.confDialog, els.vendorDialog, els.detailDial
 /* Boot */
 async function boot(){
   if(!store.api){
+    // Pre-fill with the base from your last logs; change anytime in API settings.
     store.api = {
-      url: 'https://your-api-base', // set yours in the API dialog
-      key: '',
-      mode: 'xapikey', // with CORS fixed, header auth is preferred
+      url: 'https://495c2d21-c9d4-4b7a-a885-9e9b22d936af-00-3kg4e5ukszg8i.riker.replit.dev/api',
+      key: '', // paste yours in the API dialog
+      mode: 'xapikey',
       param: 'apiKey'
     };
   }
