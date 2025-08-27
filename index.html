@@ -59,7 +59,7 @@
   .dialog-card{
     background:var(--dialog-bg); color:var(--dialog-fg);
     border:1px solid var(--dialog-border);
-    border-radius:18px; padding:14px; min-width:60vw; max-width:900px; max-height:80vh; overflow:auto;
+    border-radius:18px; padding:14px; min-width:60vw; max-width:980px; max-height:80vh; overflow:auto;
     box-shadow:0 18px 50px rgba(0,0,0,.55)
   }
   .dialog-card h2{color:#0b1220}
@@ -167,7 +167,7 @@
     </div>
   </div>
   <label>Backend API Base URL</label>
-  <input id="apiUrl" placeholder="https://conference-buddy-geoutils.replit.app" />
+  <input id="apiUrl" placeholder="https://your-api-base" />
   <div class="grid2">
     <div>
       <label>API Key</label>
@@ -186,7 +186,7 @@
     <label>Query parameter name (when using Query mode)</label>
     <input id="authParam" placeholder="apiKey" />
   </div>
-  <p class="muted">We log exact URLs (keys redacted), all headers, and bodies (sampled) for each request.</p>
+  <p class="muted">We log exact URLs (keys redacted), all headers, and body samples for each request.</p>
 </div></dialog>
 
 <!-- Logs -->
@@ -216,7 +216,7 @@
       <button id="btnCloseSelfTest" class="ghost">Close</button>
     </div>
   </div>
-  <p class="muted">Runs OPTIONS probe, health, conferences list/create, vendor create, session upload (silent WAV), enrich, fetch meta/report. Uses your configured URL + key.</p>
+  <p class="muted">Runs: OPTIONS probe, /health, list/create conference (JSON), list/create vendor (JSON), upload (multipart), enrich, fetch session/report. Uses your configured URL + key.</p>
   <div id="selfTestOutput" class="dialog-status" style="min-height:220px;max-height:60vh"></div>
 </div></dialog>
 
@@ -352,7 +352,6 @@ function pushLog(entry){
   const now = new Date();
   const item = { t: now.toISOString(), ...entry };
   logBuffer.push(item); if(logBuffer.length>LOG_CAP) logBuffer.shift();
-  // UI line (compact)
   const label = (entry.level||'info').toUpperCase();
   const msg = entry.msg || '';
   const extra = entry.extra ? ` ${entry.extra}` : '';
@@ -428,7 +427,9 @@ async function apiFetch(path, opts={}){
   const baseUrl = joinUrl(cfg.url, path);
   const url = applyAuthToUrl(baseUrl, mode, key, paramName);
   const headers = { ...(opts.headers||{}), ...buildAuthHeaders(mode, key) };
-  // Don't force Content-Type; FormData requests keep browser-generated multipart boundary.
+  // Set JSON Content-Type only if body is a string (assumed JSON)
+  if (opts.body && typeof opts.body === 'string' && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+
   const ctx = netStart({ method, url, headers, paramName });
 
   try{
@@ -453,14 +454,24 @@ async function apiFetch(path, opts={}){
     netEnd(ctx, res, bodySample);
 
     if(!res.ok){
-      const detail = bodySample ? ` — ${bodySample}` : '';
-      const err = new Error(`HTTP ${res.status} ${res.statusText}${detail}`);
+      const err = new Error(`HTTP ${res.status} ${res.statusText}${bodySample ? ' — ' + bodySample : ''}`);
       err.status = res.status;
       throw err;
     }
     if(ct.includes('application/json')) return res.json();
     return res.blob();
   }catch(e){
+    // OPTIONAL 415 auto-retry from FormData -> JSON when safe (no blobs)
+    if (e?.status === 415 && opts.body instanceof FormData) {
+      try {
+        const obj = {}; let hasBlob = false;
+        for (const [k, v] of opts.body.entries()) { if (v instanceof Blob) hasBlob = true; obj[k] = v; }
+        if (!hasBlob) {
+          log('415 received — retrying as application/json …', 'warn');
+          return await apiFetch(path, { ...opts, body: JSON.stringify(obj) });
+        }
+      } catch(_) {}
+    }
     netErr(ctx, e);
     throw e;
   }
@@ -468,9 +479,10 @@ async function apiFetch(path, opts={}){
 
 /* --- Dropdowns --- */
 async function loadConferences(selectEl){
-  const list = await apiFetch('/conferences');
+  const resp = await apiFetch('/conferences');
+  const list = Array.isArray(resp) ? resp : (resp?.data || resp?.items || []);
   selectEl.innerHTML = '';
-  for(const c of list || []){
+  for(const c of list){
     const opt = document.createElement('option');
     opt.value = c.id ?? c._id ?? c.uuid ?? c.conferenceId;
     opt.textContent = c.name ?? c.title ?? (`Conference ${opt.value}`);
@@ -500,7 +512,7 @@ async function loadVendorsForConference(confId, selectEl){
   }
 }
 
-/* --- Unknown placeholders --- */
+/* --- Unknown placeholders (JSON create) --- */
 async function ensureUnknowns(){
   const cached = store.unknown;
   if(cached?.conferenceId && cached?.vendorId) return cached;
@@ -508,14 +520,14 @@ async function ensureUnknowns(){
   let confId = null, vendorId = null;
   try{
     const conferences = await apiFetch('/conferences');
-    const unk = (conferences||[]).find(c => (c.name||'').toLowerCase() === 'unknown conference');
+    const list = Array.isArray(conferences) ? conferences : (conferences?.data || conferences?.items || []);
+    const unk = (list||[]).find(c => (c.name||'').toLowerCase() === 'unknown conference');
     if(unk) confId = unk.id ?? unk._id ?? unk.uuid ?? unk.conferenceId;
   }catch(e){ log('Could not list conferences while searching for Unknown Conference: '+e.message,'warn'); }
 
   if(!confId){
     try{
-      const fd = new FormData(); fd.append('name','Unknown Conference');
-      const created = await apiFetch('/conferences', { method:'POST', body: fd });
+      const created = await apiFetch('/conferences', { method:'POST', body: JSON.stringify({ name: 'Unknown Conference' }) });
       confId = created?.id ?? created?._id ?? created?.uuid ?? created?.conferenceId;
       log(`Created Unknown Conference: ${confId}`);
     }catch(e){ log('Failed to create Unknown Conference: '+e.message,'error'); throw e; }
@@ -529,8 +541,7 @@ async function ensureUnknowns(){
 
   if(!vendorId){
     try{
-      const fd = new FormData(); fd.append('name','Unknown Vendor'); fd.append('conferenceId', confId);
-      const createdV = await apiFetch('/vendors', { method:'POST', body: fd });
+      const createdV = await apiFetch('/vendors', { method:'POST', body: JSON.stringify({ name: 'Unknown Vendor', conferenceId: confId }) });
       vendorId = createdV?.id ?? createdV?._id ?? createdV?.uuid ?? createdV?.vendorId;
       log(`Created Unknown Vendor: ${vendorId}`);
     }catch(e){ log('Failed to create Unknown Vendor: '+e.message,'error'); throw e; }
@@ -688,7 +699,6 @@ function mkSilentWav(seconds=1, sampleRate=8000){
   ws('RIFF'); w32(36 + dataSize); ws('WAVE');
   ws('fmt '); w32(16); w16(1); w16(1); w32(sampleRate); w32(byteRate); w16(blockAlign); w16(16);
   ws('data'); w32(dataSize);
-  // data is already zero (silence)
   return new Blob([buf], { type:'audio/wav' });
 }
 async function runSelfTest(){
@@ -709,18 +719,24 @@ async function runSelfTest(){
     await apiFetch('/health'); writeSelf('GET /health ✓');
 
     // 3) list conferences
-    const confs = await apiFetch('/conferences'); writeSelf(`GET /conferences ✓ (${(confs||[]).length} found)`);
+    const confs = await apiFetch('/conferences');
+    const confArr = Array.isArray(confs) ? confs : (confs?.data || confs?.items || []);
+    writeSelf(`GET /conferences ✓ (${confArr.length} found)`);
 
-    // 4) create temp conference
-    const fdC = new FormData(); const cname = 'CB SelfTest ' + new Date().toISOString();
-    fdC.append('name', cname);
-    const cRes = await apiFetch('/conferences', { method:'POST', body: fdC });
+    // 4) create temp conference (JSON)
+    const cname = 'CB SelfTest ' + new Date().toISOString();
+    const cRes = await apiFetch('/conferences', {
+      method:'POST',
+      body: JSON.stringify({ name: cname })
+    });
     const cid = cRes.id ?? cRes._id ?? cRes.uuid ?? cRes.conferenceId;
     writeSelf(`POST /conferences ✓ id=${cid}`);
 
-    // 5) create vendor
-    const fdV = new FormData(); fdV.append('name','CB SelfTest Vendor'); fdV.append('conferenceId', cid);
-    const vRes = await apiFetch('/vendors', { method:'POST', body: fdV });
+    // 5) create vendor (JSON)
+    const vRes = await apiFetch('/vendors', {
+      method:'POST',
+      body: JSON.stringify({ name: 'CB SelfTest Vendor', conferenceId: cid })
+    });
     const vid = vRes.id ?? vRes._id ?? vRes.uuid ?? vRes.vendorId;
     writeSelf(`POST /vendors ✓ id=${vid}`);
 
@@ -751,8 +767,7 @@ async function runSelfTest(){
 
 /* --- Events --- */
 els.btnOpenAuth.addEventListener('click', ()=>{
-  // prefill with your last logs URL and your key if you want; defaults below for convenience
-  const cfg = store.api || { url:'https://conference-buddy-geoutils.replit.app', key:'', mode:'xapikey', param:'apiKey' };
+  const cfg = store.api || { url:'https://your-api-base', key:'', mode:'xapikey', param:'apiKey' };
   els.apiUrl.value = cfg.url || '';
   els.apiKey.value = cfg.key || '';
   els.authMode.value = cfg.mode || 'xapikey';
@@ -773,7 +788,6 @@ els.btnSave.addEventListener('click', ()=>{
 });
 els.btnTest.addEventListener('click', async ()=>{
   try{
-    // Try OPTIONS + GET /conferences + /health quickly
     const base = store.api?.url || els.apiUrl.value.trim();
     const url = joinUrl(base, '/conferences');
     const ctx = netStart({method:'OPTIONS', url, headers:{}, paramName:store.api?.param||'apiKey'});
@@ -805,11 +819,12 @@ els.btnRunSelfTest.addEventListener('click', runSelfTest);
 els.btnAddConf.addEventListener('click', ()=> els.confDialog.showModal());
 els.btnAddVendor.addEventListener('click', async ()=>{ await loadConferences(els.newVendorConf); els.vendorDialog.showModal(); });
 
+/* CREATE AS JSON (fix for 415) */
 els.btnCreateConf.addEventListener('click', async ()=>{
   try{
     const name = els.newConfName.value.trim(); if(!name) return alert('Please enter a conference name.');
-    const fd = new FormData(); fd.append('name', name); const d=els.newConfDate.value; if(d) fd.append('date', d);
-    const created = await apiFetch('/conferences', { method:'POST', body: fd });
+    const payload = { name }; const d=els.newConfDate.value; if(d) payload.date = d;
+    const created = await apiFetch('/conferences', { method:'POST', body: JSON.stringify(payload) });
     log('Conference created: ' + (created?.id || created?.name || 'ok'));
     els.confDialog.close();
     await loadConferences(els.confSelect);
@@ -818,13 +833,11 @@ els.btnCreateConf.addEventListener('click', async ()=>{
     await loadVendorsForConference(els.confSelect.value, els.vendorSelect);
   }catch(e){ alert('Create conference failed: ' + e.message); }
 });
-
 els.btnCreateVendor.addEventListener('click', async ()=>{
   try{
     const name = els.newVendorName.value.trim(); const confId = els.newVendorConf.value;
     if(!name || !confId) return alert('Enter vendor name and select a conference.');
-    const fd = new FormData(); fd.append('name', name); fd.append('conferenceId', confId);
-    const created = await apiFetch('/vendors', { method:'POST', body: fd });
+    const created = await apiFetch('/vendors', { method:'POST', body: JSON.stringify({ name, conferenceId: confId }) });
     log('Vendor created: ' + (created?.id || created?.name || 'ok'));
     els.vendorDialog.close();
     if(els.confSelect.value) await loadVendorsForConference(els.confSelect.value, els.vendorSelect);
@@ -896,12 +909,11 @@ for(const d of [els.authDialog, els.confDialog, els.vendorDialog, els.detailDial
 
 /* Boot */
 async function boot(){
-  // Pre-fill with your last-seen URL from logs (you can overwrite in the API dialog).
   if(!store.api){
     store.api = {
-      url: 'https://conference-buddy-geoutils.replit.app',
-      key: '', // paste your key in the dialog; we never log it
-      mode: 'xapikey', // CORS is fixed; use header auth by default
+      url: 'https://your-api-base', // set yours in the API dialog
+      key: '',
+      mode: 'xapikey', // with CORS fixed, header auth is preferred
       param: 'apiKey'
     };
   }
