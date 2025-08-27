@@ -23,7 +23,6 @@
   ::selection{background:var(--selection);color:#fff}
   a{color:var(--accent)}
 
-  /* Header + Top Toolbar */
   header{
     position:fixed;left:0;right:0;top:0;z-index:60;
     background:linear-gradient(180deg,rgba(10,16,32,.98),rgba(10,16,32,.90));
@@ -34,7 +33,6 @@
   .brand strong{font-size:15px}
   .badge,.chip{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:5px 10px}
   .badge{background:#0b1a3a;color:#c5d7ff}.chip{color:#b9caf2}
-
   .toolbar{
     display:flex;gap:8px;align-items:center;justify-content:flex-end;
     padding:8px 10px; border-top:1px solid var(--border);
@@ -44,7 +42,6 @@
 
   .wrap{max-width:740px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:12px}
 
-  /* Controls / Sections */
   button,input,select,textarea{width:100%;padding:14px;border-radius:14px;border:1px solid var(--border);background:var(--bg2);color:#e6eefc;outline:none}
   button{cursor:pointer}
   button.primary{background:linear-gradient(180deg,var(--accent),var(--accent2));border:none;color:#fff;font-weight:700}
@@ -58,14 +55,12 @@
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   @media(max-width:480px){ .grid2{grid-template-columns:1fr} }
   .pill{display:inline-flex;gap:6px;align-items:center;padding:6px 12px;background:#0d2048;border:1px solid var(--border);border-radius:999px;color:#bcd1ff;font-size:12px}
-
   .status{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;background:#0b152c;border:1px solid var(--border);border-radius:12px;padding:10px;max-height:40vh;overflow:auto}
   .thumb{width:92px;height:92px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
   .thumbwrap{position:relative}
   .removebtn{position:absolute;top:4px;right:4px;background:#0008;border:1px solid var(--border);color:#fff;border-radius:999px;padding:2px 6px;font-size:12px}
   .preview{display:flex;gap:8px;flex-wrap:wrap}
 
-  /* Dialogs (white, readable) */
   dialog{border:none;border-radius:18px;padding:0;background:transparent;color:inherit}
   .dialog-card{
     background:var(--dialog-bg); color:var(--dialog-fg);
@@ -229,7 +224,7 @@
       <button id="btnCloseSelfTest" class="ghost">Close</button>
     </div>
   </div>
-  <p class="muted">Runs: OPTIONS, /health, list/create conference (JSON w/ dates), list/create vendor (JSON w/ conference_id), upload (multipart → fallback JSON) with start/end/duration, enrich, fetch session/report.</p>
+  <p class="muted">Runs: OPTIONS, /health, list/create conference, list/create vendor, upload (multipart → fallback JSON) with start/end/duration, enrich, fetch session/report.</p>
   <div id="selfTestOutput" class="dialog-status" style="min-height:220px;max-height:60vh"></div>
 </div></dialog>
 
@@ -265,10 +260,16 @@
 <!-- Session Detail -->
 <dialog id="detailDialog"><div class="dialog-card" id="detailContainer"></div></dialog>
 
-<script>
-/* ================
-   Core references
-   ================ */
+<script type="module">
+import {
+  api, setConfig, getConfig, onLog, getLogs, clearLogs,
+  listConferences, listVendorsForConference, listAllVendors,
+  createConference, createVendor, ensureConferenceVendor,
+  uploadSession, getSession, getSessionReport, listSessionsForVendor,
+  runSelfTest, todayISO
+} from './cb-api.js';
+
+/* ----- UI refs ----- */
 const els = {
   apiStatus: document.getElementById('apiStatus'),
   btnOpenAuth: document.getElementById('btnOpenAuth'),
@@ -335,172 +336,32 @@ const els = {
   btnCloseSelfTest: document.getElementById('btnCloseSelfTest'),
 };
 
-/* =================
-   Persistence
-   ================= */
-const store = {
-  get api(){ return JSON.parse(localStorage.getItem('cb_api') || 'null'); },
-  set api(v){ localStorage.setItem('cb_api', JSON.stringify(v)); },
-};
-
-/* =================
-   Logging helpers
-   ================= */
-const LOG_CAP = 5000; let logBuffer = [];
-function redactHeaders(headers){
-  const safe = {...headers};
-  if('X-API-Key' in safe) safe['X-API-Key'] = '***';
-  if('Authorization' in safe) safe['Authorization'] = '***';
-  return safe;
-}
-function redactUrlParam(url, paramName){
-  try{ const u = new URL(url); if (u.searchParams.has(paramName)) u.searchParams.set(paramName, '***'); return u.toString(); }
-  catch{ return url; }
-}
-function objFromHeaders(headers){ const o={}; try{ for(const [k,v] of headers.entries()) o[k]=v; }catch{} return o; }
-function pushLog(entry){
-  const now = new Date(); const item = { t: now.toISOString(), ...entry };
-  logBuffer.push(item); if(logBuffer.length>LOG_CAP) logBuffer.shift();
+/* ----- Logging UI wiring ----- */
+function appendStatus(line){ els.status.textContent += (els.status.textContent?'\n':'') + line; els.status.scrollTop = els.status.scrollHeight; }
+onLog((entry)=>{
+  const time = new Date(entry.t).toLocaleTimeString();
   const label = (entry.level||'info').toUpperCase();
-  const msg = entry.msg || ''; const extra = entry.extra ? ` ${entry.extra}` : '';
-  const line = `[${now.toLocaleTimeString()}] [${label}] ${msg}${extra}`;
-  els.status.textContent += (els.status.textContent ? '\n' : '') + line;
-  els.status.scrollTop = els.status.scrollHeight;
-  const fn = entry.level==='error'?'error':(entry.level==='warn'?'warn':'log'); console[fn](item);
-}
-function log(msg, level='info', extra=''){ pushLog({msg, level, extra}); }
-function netStart({method, url, headers, paramName}){
-  const id = Math.random().toString(36).slice(2,9);
-  const start = performance.now();
-  const urlRed = redactUrlParam(url, paramName);
-  pushLog({ level:'info', msg:`HTTP ${method} ${urlRed}`, extra:'→ request', id, method, url:urlRed, start, reqHeaders:redactHeaders(headers) });
-  return { id, start, method, url, paramName };
-}
-function netEnd(ctx, res, bodySample){
-  const dur = (performance.now()-ctx.start).toFixed(0);
-  const h = objFromHeaders(res.headers||{});
-  pushLog({ level:'info', msg:`HTTP ${ctx.method} ${redactUrlParam(ctx.url, ctx.paramName)}`, extra:`← ${res.status} ${res.statusText} (${dur}ms)`, id:ctx.id, dur, status:res.status, resHeaders:h, body: bodySample });
-}
-function netErr(ctx, err){
-  const dur = (performance.now()-ctx.start).toFixed(0);
-  pushLog({ level:'error', msg:`HTTP ${ctx.method} ${redactUrlParam(ctx.url, ctx.paramName)}`, extra:`✖ ${err.message} (${dur}ms)`, id:ctx.id, dur, error:String(err) });
-  if (String(err).includes('Failed to fetch')) log('Hint: CORS preflight blocked by browser. Confirm server CORS & allowed headers.', 'warn');
-}
+  const msg = entry.msg || '';
+  const extra = entry.extra ? ` ${entry.extra}` : '';
+  appendStatus(`[${time}] [${label}] ${msg}${extra}`);
+  if (els.logVerbosity.value === 'verbose'){
+    // refresh live logs only in verbose to avoid spam; button opens anyway
+    showLogs();
+  }
+});
 function showLogs(){
   const verbose = els.logVerbosity.value === 'verbose';
-  const text = logBuffer.map(l=> verbose ? JSON.stringify(l, null, 2) : `${l.t} [${(l.level||'info').toUpperCase()}] ${l.msg}${l.extra?(' '+l.extra):''}`).join('\n');
+  const text = getLogs().map(l=> verbose ? JSON.stringify(l, null, 2) : `${l.t} [${(l.level||'info').toUpperCase()}] ${l.msg}${l.extra?(' '+l.extra):''}`).join('\n');
   els.logsView.textContent = text || '(no logs yet)';
 }
+function downloadBlob(name, blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},0); }
 
-/* =================
-   Fetch wrapper
-   ================= */
-function joinUrl(base, path){ return base.replace(/\/+$/,'') + (path.startsWith('/')? path : '/'+path); }
-function addQuery(url, kv){ const u = new URL(url); for(const [k,v] of Object.entries(kv)) if (v!=null && v!=='') u.searchParams.set(k, v); return u.toString(); }
-function buildAuthHeaders(mode, key){ const h={}; if(mode==='bearer') h['Authorization']=`Bearer ${key}`; else if(mode==='xapikey') h['X-API-Key']=key; return h; }
-function applyAuthToUrl(url, mode, key, paramName){ return mode==='query' ? addQuery(url, {[paramName]: key}) : url; }
-
-async function apiFetch(path, opts={}){
-  const cfg = store.api; if(!cfg?.url) throw new Error('Missing API base URL. Open API Settings.');
-  const method = (opts.method || 'GET').toUpperCase();
-  const mode = cfg.mode || 'xapikey'; const key = cfg.key || ''; const paramName = cfg.param || 'apiKey';
-  const baseUrl = joinUrl(cfg.url, path); const url = applyAuthToUrl(baseUrl, mode, key, paramName);
-  const headers = { ...(opts.headers||{}), ...buildAuthHeaders(mode, key) };
-  if (opts.body && typeof opts.body === 'string' && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
-
-  const ctx = netStart({ method, url, headers, paramName });
-  try{
-    const res = await fetch(url, { method, headers, body: opts.body || undefined, mode:'cors', credentials:'omit' });
-    const ct = (res.headers.get('content-type') || '').toLowerCase();
-
-    let bodySample = null;
-    try{
-      if (ct.includes('application/json')) bodySample = JSON.stringify(await res.clone().json()).slice(0,2000);
-      else if (ct.includes('text/')) bodySample = (await res.clone().text()).slice(0,2000);
-      else { const blob = await res.clone().blob(); bodySample = `[blob ${blob.type||'application/octet-stream'} ${blob.size} bytes]`; }
-    }catch{}
-
-    netEnd(ctx, res, bodySample);
-    if(!res.ok){ const err = new Error(`HTTP ${res.status} ${res.statusText}${bodySample ? ' — ' + bodySample : ''}`); err.status=res.status; err.body = bodySample||''; throw err; }
-    if(ct.includes('application/json')) return res.json();
-    return res.blob();
-  }catch(e){
-    // Only for multipart -> JSON fallback on servers that require JSON
-    const isUnsupported = e?.status === 415 || (e?.status === 500 && String(e.body||'').includes("Unsupported Media Type"));
-    if (isUnsupported && opts.body instanceof FormData) {
-      try {
-        const asJson = await formDataToJsonPayload(opts.body);
-        if ('notes' in asJson) delete asJson.notes; // safety
-        log('Server rejected multipart for /sessions/upload. Retrying with JSON payload (base64 + timing)…','warn');
-        return await apiFetch(path, { ...opts, body: JSON.stringify(asJson) });
-      } catch(re){ log('Retry-as-JSON failed to construct payload: ' + re.message, 'error'); }
-    }
-    netErr(ctx, e); throw e;
-  }
-}
-
-/* =================
-   Shapes / helpers
-   ================= */
-function asArray(maybe){
-  if (Array.isArray(maybe)) return maybe;
-  if (maybe && typeof maybe === 'object') {
-    if (Array.isArray(maybe.data)) return maybe.data;
-    if (Array.isArray(maybe.items)) return maybe.items;
-  }
-  return [];
-}
-function escapeHtml(str){ return str.replace(/[&<>"']/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s])); }
-function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
-
-/* =================
-   File JSON fallback
-   ================= */
-function readBlobAsDataURL(blob){
-  return new Promise((resolve,reject)=>{ const r=new FileReader(); r.onerror=()=>reject(new Error('FileReader error')); r.onload=()=>resolve(String(r.result||'')); r.readAsDataURL(blob); });
-}
-async function formDataToJsonPayload(fd){
-  const payload = { images: [], audio: null };
-  const plain = {};
-  for (const [k, v] of fd.entries()){
-    if (v instanceof Blob){
-      const isAudio = k.toLowerCase().includes('audio');
-      const dataUrl = await readBlobAsDataURL(v);
-      const [meta, b64] = dataUrl.split(',', 2);
-      const contentType = (meta.match(/^data:(.*?);base64$/)||[])[1] || (v.type||'application/octet-stream');
-      const fileObj = { filename: (v.name||('file.'+(contentType.split('/')[1]||'bin'))), content_type: contentType, data: b64 };
-      if (isAudio) payload.audio = fileObj; else payload.images.push(fileObj);
-    } else {
-      plain[k] = v;
-    }
-  }
-  // Explicit mapping only (never spread `plain`)
-  const conference_id = plain.conference_id || plain.conferenceId || '';
-  const vendor_id     = plain.vendor_id || plain.vendorId || '';
-  const text          = plain.text || plain.notes || '';  // notes -> text
-  const start_time    = plain.start_time || plain.startTime || '';
-  const end_time      = plain.end_time || plain.endTime || '';
-  const duration      = plain.duration_seconds || plain.durationSeconds || '';
-
-  if (conference_id){ payload.conference_id = conference_id; payload.conferenceId = conference_id; }
-  if (vendor_id){     payload.vendor_id     = vendor_id;     payload.vendorId     = vendor_id; }
-  if (text){          payload.text          = text; }  // NEVER send notes
-  if (start_time){    payload.start_time    = start_time;    payload.startTime    = start_time; }
-  if (end_time){      payload.end_time      = end_time;      payload.endTime      = end_time; }
-  if (duration){      payload.duration_seconds = duration;   payload.durationSeconds = duration; }
-
-  if ('notes' in payload) delete payload.notes; // belt & braces
-  return payload;
-}
-
-/* =================
-   Dropdowns
-   ================= */
+/* ----- Helpers for dropdowns ----- */
 function insertNoneOption(selectEl, label='— None —'){
   const opt = document.createElement('option'); opt.value=''; opt.textContent=label; selectEl.appendChild(opt);
 }
-async function loadConferences(selectEl){
-  const resp = await apiFetch('/conferences'); const list = asArray(resp);
+async function populateConferences(selectEl){
+  const list = await listConferences();
   selectEl.innerHTML = ''; insertNoneOption(selectEl);
   for(const c of list){
     const opt = document.createElement('option');
@@ -509,23 +370,20 @@ async function loadConferences(selectEl){
     selectEl.appendChild(opt);
   }
 }
-async function loadVendorsForConference(confId, selectEl){
+async function populateVendorsForConference(confId, selectEl){
   selectEl.innerHTML = ''; insertNoneOption(selectEl);
   if(!confId) return;
   try{
-    const resp = await apiFetch(`/conferences/${encodeURIComponent(confId)}/vendors`);
-    const list = asArray(resp);
+    const list = await listVendorsForConference(confId);
     for(const v of list){
       const opt = document.createElement('option');
       opt.value = v.id ?? v._id ?? v.uuid ?? v.vendorId;
       opt.textContent = v.name ?? (`Vendor ${opt.value}`);
       selectEl.appendChild(opt);
     }
-  }catch(e){
-    log(`Warn: couldn't load vendors for conference — ${e.message}. Falling back to /vendors`, 'warn');
-    const resp = await apiFetch('/vendors');
-    const list = asArray(resp);
-    for(const v of list){
+  }catch{
+    const all = await listAllVendors();
+    for(const v of all){
       const opt = document.createElement('option');
       opt.value = v.id ?? v._id ?? v.uuid ?? v.vendorId;
       opt.textContent = v.name ?? (`Vendor ${opt.value}`);
@@ -534,61 +392,7 @@ async function loadVendorsForConference(confId, selectEl){
   }
 }
 
-/* ================================
-   Ensure conference & vendor exist
-   ================================ */
-async function getOrCreateUnknownConference(){
-  try{
-    const conferences = await apiFetch('/conferences');
-    const list = asArray(conferences);
-    const unk = (list||[]).find(c => (c.name||'').toLowerCase() === 'unknown conference');
-    if(unk) return (unk.id ?? unk._id ?? unk.uuid ?? unk.conferenceId);
-  }catch(e){ log('Could not list conferences while searching for Unknown Conference: '+e.message,'warn'); }
-  const payload = { name: 'Unknown Conference', start_date: todayISO(), end_date: todayISO() };
-  const created = await apiFetch('/conferences', { method:'POST', body: JSON.stringify(payload) });
-  const cid = created?.id ?? created?._id ?? created?.uuid ?? created?.conferenceId;
-  log(`Created Unknown Conference: ${cid}`);
-  return cid;
-}
-
-async function getOrCreateVendorByName(conferenceId, name){
-  try{
-    const vendors = await apiFetch(`/conferences/${encodeURIComponent(conferenceId)}/vendors`);
-    const list = asArray(vendors);
-    const found = (list||[]).find(v => (v.name||'').toLowerCase() === (name||'').toLowerCase());
-    if(found) return (found.id ?? found._id ?? found.uuid ?? found.vendorId);
-  }catch(e){ log(`Could not list vendors for conference ${conferenceId}: `+e.message,'warn'); }
-  const created = await apiFetch('/vendors', { method:'POST', body: JSON.stringify({ name, conference_id: conferenceId }) });
-  const vid = created?.id ?? created?._id ?? created?.uuid ?? created?.vendorId;
-  log(`Created Vendor "${name}" for conference ${conferenceId}: ${vid}`);
-  return vid;
-}
-
-async function ensureConferenceVendor({conferenceId, vendorId, preferredVendorName}){
-  if(!conferenceId){
-    conferenceId = await getOrCreateUnknownConference();
-  }
-  if(vendorId){
-    try{
-      const v = await apiFetch(`/vendors/${encodeURIComponent(vendorId)}`);
-      const vcid = v?.conference_id ?? v?.conferenceId ?? null;
-      if (vcid && conferenceId && String(vcid) !== String(conferenceId)) {
-        log(`Vendor ${vendorId} belongs to a different conference (${vcid} != ${conferenceId}). Creating scoped vendor.`, 'warn');
-        vendorId = await getOrCreateVendorByName(conferenceId, preferredVendorName || 'Unknown Vendor');
-      }
-    }catch(e){
-      log(`Provided vendor ID ${vendorId} not found. Creating vendor instead.`, 'warn');
-      vendorId = await getOrCreateVendorByName(conferenceId, preferredVendorName || 'Unknown Vendor');
-    }
-  } else {
-    vendorId = await getOrCreateVendorByName(conferenceId, preferredVendorName || 'Unknown Vendor');
-  }
-  return { conferenceId, vendorId };
-}
-
-/* =================
-   Recording
-   ================= */
+/* ----- Media recording ----- */
 let mediaStream=null, mediaRecorder=null, audioChunks=[], recording=false;
 let sessionStartIso=null, sessionEndIso=null;
 
@@ -610,22 +414,20 @@ async function startRecording(){
   recording=true;
   sessionStartIso = new Date().toISOString();
   els.pillAudio.textContent='recording';
-  log('Audio recording started.');
+  api.log('Audio recording started.');
 }
 async function stopRecordingGetBlob(){
   if(!mediaRecorder || !recording) return null;
   const stopped = new Promise(resolve=> mediaRecorder.addEventListener('stop', resolve, { once:true }));
-  mediaRecorder.stop(); log('Stopping recorder…'); await stopped;
+  mediaRecorder.stop(); api.log('Stopping recorder…'); await stopped;
   sessionEndIso = new Date().toISOString();
   const blob = new Blob(audioChunks,{ type: mediaRecorder.mimeType || 'audio/webm' });
-  log(`Audio captured: ${(blob.size/1024/1024).toFixed(2)} MB`);
+  api.log(`Audio captured: ${(blob.size/1024/1024).toFixed(2)} MB`);
   recording=false;
   return blob;
 }
 
-/* =================
-   Images (dynamic)
-   ================= */
+/* ----- Images ----- */
 let imageFiles = [];
 function renderImagePreview(){
   const preview = els.imagePreview; preview.innerHTML = '';
@@ -641,83 +443,26 @@ function renderImagePreview(){
 }
 els.imageInput.addEventListener('change', (e)=>{ imageFiles = imageFiles.concat(Array.from(e.target.files || [])); renderImagePreview(); });
 
-/* =================
-   Upload & Enrich
-   ================= */
-function secondsBetweenISO(startIso, endIso){
-  try{ const a = new Date(startIso).getTime(); const b = new Date(endIso).getTime(); return Math.max(0, Math.round((b-a)/1000)); }catch{ return 0; }
-}
-
-async function uploadSession({audioBlob, images, notes, conferenceId, vendorId}){
-  // Ensure vendor exists for the resolved conference
-  const ensured = await ensureConferenceVendor({ conferenceId, vendorId });
-  conferenceId = ensured.conferenceId; vendorId = ensured.vendorId;
-
-  const startIso = sessionStartIso || new Date().toISOString();
-  const endIso   = sessionEndIso   || startIso;
-  const duration = secondsBetweenISO(startIso, endIso);
-
-  // Prefer multipart first
-  const fd = new FormData();
-  if(audioBlob) fd.append('audio', audioBlob, `session.${(audioBlob.type.split('/')[1]||'webm').split(';')[0]}`);
-  for(const f of images){ fd.append('images', f, f.name); }
-  if(notes) fd.append('text', notes); // backend expects `text`
-
-  // IDs
-  fd.append('conference_id', conferenceId); fd.append('conferenceId', conferenceId);
-  fd.append('vendor_id', vendorId);         fd.append('vendorId', vendorId);
-
-  // Timing
-  fd.append('start_time', startIso); fd.append('startTime', startIso);
-  fd.append('end_time', endIso);     fd.append('endTime', endIso);
-  fd.append('duration_seconds', String(duration)); fd.append('durationSeconds', String(duration));
-
-  try{
-    const res = await apiFetch('/sessions/upload', { method:'POST', body: fd });
-    const sessionId = res.id ?? res.sessionId ?? res._id ?? res.uuid;
-    if(!sessionId) throw new Error('Upload succeeded but response did not include a session ID.');
-    log(`Uploaded. Session ID: ${sessionId}`); els.pillSession.textContent = sessionId;
-    try{ await apiFetch(`/sessions/${encodeURIComponent(sessionId)}/enrich`, { method:'POST' }); log('Enrichment triggered.'); }
-    catch(e){ log(`Warning: could not trigger enrichment automatically — ${e.message}`,'warn'); }
-    return sessionId;
-  }catch(err){
-    const hint = String(err.body||err.message||'');
-    const isMediaTypeComplaint = err.status === 415 || (err.status === 500 && hint.includes('Unsupported Media Type'));
-    if (!isMediaTypeComplaint) throw err;
-
-    log('Server rejected multipart for /sessions/upload. Retrying with JSON payload (base64 + timing)…','warn');
-    const jsonPayload = await formDataToJsonPayload(fd); // maps notes->text automatically
-    if ('notes' in jsonPayload) delete jsonPayload.notes;
-    const res = await apiFetch('/sessions/upload', { method:'POST', body: JSON.stringify(jsonPayload) });
-    const sessionId = res.id ?? res.sessionId ?? res._id ?? res.uuid;
-    if(!sessionId) throw new Error('Upload (JSON) succeeded but response did not include a session ID.');
-    log(`Uploaded (JSON). Session ID: ${sessionId}`); els.pillSession.textContent = sessionId;
-    try{ await apiFetch(`/sessions/${encodeURIComponent(sessionId)}/enrich`, { method:'POST' }); log('Enrichment triggered.'); }
-    catch(e){ log(`Warning: could not trigger enrichment automatically — ${e.message}`,'warn'); }
-    return sessionId;
-  } finally {
-    resetRecording();
-  }
-}
-
-/* =================
-   Previous sessions
-   ================= */
+/* ----- Previous sessions ----- */
 async function loadPrevious(conferenceId, vendorId){
   const sessions = [];
   async function forVendor(vid){
     try{
-      const list = await apiFetch(`/vendors/${encodeURIComponent(vid)}/sessions`);
-      (Array.isArray(list)?list:asArray(list)).forEach(s=> sessions.push(s));
-    }catch(e){ log(`Error loading sessions for vendor ${vid}: ${e.message}`,'error'); }
+      const list = await listSessionsForVendor(vid);
+      (Array.isArray(list)?list:(Array.isArray(list?.data)?list.data:[])).forEach(s=> sessions.push(s));
+    }catch(e){ api.log(`Error loading sessions for vendor ${vid}: ${e.message}`,'error'); }
   }
   if(vendorId) await forVendor(vendorId);
   else if(conferenceId){
-    const vendors = await apiFetch(`/conferences/${encodeURIComponent(conferenceId)}/vendors`);
-    for(const v of asArray(vendors)){ const vid = v.id ?? v._id ?? v.vendorId ?? v.uuid; if(vid) await forVendor(vid); }
+    const vendors = await listVendorsForConference(conferenceId);
+    for(const v of (Array.isArray(vendors)?vendors:(vendors?.data||[]))){
+      const vid = v.id ?? v._id ?? v.vendorId ?? v.uuid; if(vid) await forVendor(vid);
+    }
   }else{
-    const allV = await apiFetch('/vendors');
-    for(const v of asArray(allV)){ const vid = v.id ?? v._id ?? v.vendorId ?? v.uuid; if(vid) await forVendor(vid); }
+    const allV = await listAllVendors();
+    for(const v of (Array.isArray(allV)?allV:(allV?.data||[]))){
+      const vid = v.id ?? v._id ?? v.vendorId ?? v.uuid; if(vid) await forVendor(vid);
+    }
   }
 
   els.prevList.innerHTML = '';
@@ -739,17 +484,17 @@ async function loadPrevious(conferenceId, vendorId){
 
 async function openSessionDetail(sessionId){
   let meta=null, report=null;
-  try{ meta = await apiFetch(`/sessions/${encodeURIComponent(sessionId)}`); }
-  catch(e){ log(`Error fetching session meta: ${e.message}`,'error'); }
-  try{ report = await apiFetch(`/reports/session/${encodeURIComponent(sessionId)}`); }
-  catch(e){ log(`Error fetching session report: ${e.message}`,'error'); }
+  try{ meta = await getSession(sessionId); }
+  catch(e){ api.log(`Error fetching session meta: ${e.message}`,'error'); }
+  try{ report = await getSessionReport(sessionId); }
+  catch(e){ api.log(`Error fetching session report: ${e.message}`,'error'); }
 
   const files = (meta?.files||meta?.uploads||[]);
   const images = (report?.images || meta?.images || []);
   const ocr = report?.imageOcr || report?.ocr || null;
   const transcript = report?.transcript || report?.transcription || null;
   const summary = report?.summary || null;
-  const textField = meta?.text || meta?.notes || report?.notes || null; // display stored text
+  const textField = meta?.text || report?.notes || null; // stored text
 
   const imgHtml = (images && images.length) ? `<div class="preview">${images.map(u=>`<img src="${u}" class="thumb" alt="image">`).join('')}</div>` : `<em class="muted">No images</em>`;
   const filesHtml = (files && files.length) ? `<ul>${files.map(f=>`<li><a href="${f.url||f.href||'#'}" target="_blank" rel="noopener">${f.name||f.filename||f.url||'file'}</a></li>`).join('')}</ul>` : `<em class="muted">No files</em>`;
@@ -761,83 +506,20 @@ async function openSessionDetail(sessionId){
     </div>
     <div class="grid2">
       <div class="section"><strong>Files</strong>${filesHtml}</div>
-      <div class="section"><strong>Transcript</strong><pre class="status" style="max-height:180px">${transcript ? escapeHtml(String(transcript)) : '—'}</pre></div>
+      <div class="section"><strong>Transcript</strong><pre class="status" style="max-height:180px">${transcript ? String(transcript).replace(/[&<>"']/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s])) : '—'}</pre></div>
     </div>
-    <div class="section"><strong>Image OCR</strong><pre class="status" style="max-height:180px">${ocr ? escapeHtml(typeof ocr==='string'? ocr : JSON.stringify(ocr,null,2)) : '—'}</pre></div>
+    <div class="section"><strong>Image OCR</strong><pre class="status" style="max-height:180px">${ocr ? (typeof ocr==='string'? ocr : JSON.stringify(ocr,null,2)).replace(/[&<>"']/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s])) : '—'}</pre></div>
     <div class="section"><strong>Images</strong>${imgHtml}</div>
     <div class="grid2">
-      <div class="section"><strong>Notes</strong><pre class="status" style="max-height:140px">${textField ? escapeHtml(String(textField)) : '—'}</pre></div>
-      <div class="section"><strong>Summary</strong><pre class="status" style="max-height:140px">${summary ? escapeHtml(String(summary)) : '—'}</pre></div>
+      <div class="section"><strong>Notes</strong><pre class="status" style="max-height:140px">${textField ? String(textField).replace(/[&<>"']/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s])) : '—'}</pre></div>
+      <div class="section"><strong>Summary</strong><pre class="status" style="max-height:140px">${summary ? String(summary).replace(/[&<>"']/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s])) : '—'}</pre></div>
     </div>`;
   els.detailDialog.showModal();
 }
 
-/* =================
-   Self-test suite
-   ================= */
-function writeSelf(msg){ els.selfTestOutput.textContent += (els.selfTestOutput.textContent?'\n':'') + msg; }
-function mkSilentWav(seconds=1, sampleRate=8000){
-  const numSamples = seconds * sampleRate, bytesPerSample=2, blockAlign=1*bytesPerSample, byteRate=sampleRate*blockAlign, dataSize=numSamples*bytesPerSample;
-  const buf = new ArrayBuffer(44 + dataSize); const dv = new DataView(buf); let o=0;
-  function w32(v){ dv.setUint32(o, v, true); o+=4; } function w16(v){ dv.setUint16(o, v, true); o+=2; } function ws(s){ for(let i=0;i<s.length;i++) dv.setUint8(o++, s.charCodeAt(i)); }
-  ws('RIFF'); w32(36 + dataSize); ws('WAVE'); ws('fmt '); w32(16); w16(1); w16(1); w32(sampleRate); w32(byteRate); w16(blockAlign); w16(16); ws('data'); w32(dataSize);
-  return new Blob([buf], { type:'audio/wav' });
-}
-async function runSelfTest(){
-  els.selfTestOutput.textContent = '';
-  try{
-    const cfg = store.api;
-    if(!cfg?.url || !cfg?.key) { writeSelf('✖ Missing URL or API key in settings.'); return; }
-    writeSelf('• Using base: ' + cfg.url);
-
-    const optionsUrl = joinUrl(cfg.url, '/conferences');
-    const ctx = netStart({method:'OPTIONS', url:optionsUrl, headers:{}, paramName:cfg.param||'apiKey'});
-    const res = await fetch(optionsUrl, { method:'OPTIONS', mode:'cors', credentials:'omit' });
-    const h = objFromHeaders(res.headers); netEnd(ctx, res, JSON.stringify(h).slice(0,1000));
-    writeSelf(`OPTIONS /conferences → ${res.status} (see Logs for headers)`);
-
-    await apiFetch('/health'); writeSelf('GET /health ✓');
-
-    const confs = await apiFetch('/conferences'); const confArr = asArray(confs);
-    writeSelf(`GET /conferences ✓ (${confArr.length} found)`);
-
-    const cname = 'CB SelfTest ' + new Date().toISOString(); const today = todayISO();
-    const cRes = await apiFetch('/conferences', { method:'POST', body: JSON.stringify({ name: cname, start_date: today, end_date: today }) });
-    const cid = cRes.id ?? cRes._id ?? cRes.uuid ?? cRes.conferenceId; writeSelf(`POST /conferences ✓ id=${cid}`);
-
-    const vRes = await apiFetch('/vendors', { method:'POST', body: JSON.stringify({ name: 'CB SelfTest Vendor', conference_id: cid }) });
-    const vid = vRes.id ?? vRes._id ?? vRes.uuid ?? vRes.vendorId; writeSelf(`POST /vendors ✓ id=${vid}`);
-
-    const st = new Date().toISOString();
-    const silent = mkSilentWav(1,8000);
-    const upload = new FormData();
-    upload.append('audio', silent, 'selftest.wav');
-    upload.append('text', 'Self-test upload ' + st); // use `text`
-    upload.append('conference_id', cid); upload.append('conferenceId', cid);
-    upload.append('vendor_id', vid);     upload.append('vendorId', vid);
-    upload.append('start_time', st);     upload.append('startTime', st);
-    upload.append('end_time', st);       upload.append('endTime', st);
-    upload.append('duration_seconds', '1'); upload.append('durationSeconds','1');
-    const sRes = await apiFetch('/sessions/upload', { method:'POST', body: upload });
-    const sid = sRes.id ?? sRes._id ?? sRes.uuid ?? sRes.sessionId; writeSelf(`POST /sessions/upload ✓ id=${sid}`);
-
-    await apiFetch(`/sessions/${encodeURIComponent(sid)}/enrich`, { method:'POST' }); writeSelf('POST /sessions/{id}/enrich ✓ (started)');
-    await apiFetch(`/sessions/${encodeURIComponent(sid)}`); writeSelf('GET /sessions/{id} ✓');
-    await apiFetch(`/reports/session/${encodeURIComponent(sid)}`); writeSelf('GET /reports/session/{id} ✓');
-
-    writeSelf('✔ Self-Test completed. See Logs (Verbose) for details.');
-  }catch(e){
-    writeSelf('✖ Self-Test failed: ' + e.message + ' — check Logs for details.');
-  }
-}
-
-/* =================
-   Events & Boot
-   ================= */
-function setConnected(on){ els.apiStatus.textContent = on?'Connected':'Disconnected'; }
-
+/* ----- Top toolbar buttons ----- */
 els.btnOpenAuth.addEventListener('click', ()=>{
-  const cfg = store.api || { url:'https://conference-buddy-geoutils.replit.app/api', key:'', mode:'xapikey', param:'apiKey' };
+  const cfg = getConfig() || { url:'https://conference-buddy-geoutils.replit.app/api', key:'', mode:'xapikey', param:'apiKey' };
   els.apiUrl.value = cfg.url || '';
   els.apiKey.value = cfg.key || '';
   els.authMode.value = cfg.mode || 'xapikey';
@@ -851,19 +533,14 @@ els.btnSave.addEventListener('click', ()=>{
   const mode = els.authMode.value;
   const param = (els.authParam.value.trim() || 'apiKey');
   if(!url || !key){ alert('Please enter API base URL and API key.'); return; }
-  store.api = { url, key, mode, param };
-  setConnected(true);
+  setConfig({ url, key, mode, param });
+  els.apiStatus.textContent = 'Connected';
   els.authDialog.close();
   boot();
 });
 els.btnTest.addEventListener('click', async ()=>{
   try{
-    const base = store.api?.url || els.apiUrl.value.trim();
-    const url = joinUrl(base, '/conferences');
-    const ctx = netStart({method:'OPTIONS', url, headers:{}, paramName:store.api?.param||'apiKey'});
-    const res = await fetch(url, { method:'OPTIONS', mode:'cors', credentials:'omit' });
-    netEnd(ctx, res, JSON.stringify(objFromHeaders(res.headers)).slice(0,1000));
-    await apiFetch('/health'); await apiFetch('/conferences');
+    await api.testConnectivity();
     alert('Connection OK (OPTIONS + GETs succeeded). Check Logs for details.');
   }catch(e){ alert('Connection failed: ' + e.message); }
 });
@@ -872,115 +549,132 @@ els.btnLogs.addEventListener('click', ()=>{ showLogs(); els.logsDialog.showModal
 els.btnCloseLogs.addEventListener('click', ()=> els.logsDialog.close());
 els.logVerbosity.addEventListener('change', showLogs);
 els.btnCopyLogs.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(els.logsView.textContent || ''); alert('Logs copied'); } catch(_){ alert('Copy failed. Select text and copy.'); } });
-function downloadBlob(name, blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},0); }
 els.btnDownloadTxt.addEventListener('click', ()=> downloadBlob('cb-logs.txt', new Blob([els.logsView.textContent||''], {type:'text/plain'})));
-els.btnDownloadJson.addEventListener('click', ()=> downloadBlob('cb-logs.json', new Blob([JSON.stringify(logBuffer,null,2)], {type:'application/json'})));
+els.btnDownloadJson.addEventListener('click', ()=> downloadBlob('cb-logs.json', new Blob([JSON.stringify(getLogs(),null,2)], {type:'application/json'})));
 
 els.btnSelfTest.addEventListener('click', ()=> { els.selfTestOutput.textContent=''; els.selfTestDialog.showModal(); });
 els.btnCloseSelfTest.addEventListener('click', ()=> els.selfTestDialog.close());
-els.btnRunSelfTest.addEventListener('click', runSelfTest);
+els.btnRunSelfTest.addEventListener('click', async ()=>{
+  els.selfTestOutput.textContent = '';
+  try{
+    const out = await runSelfTest();
+    els.selfTestOutput.textContent = out.join('\n');
+  }catch(e){
+    els.selfTestOutput.textContent = '✖ Self-Test failed: ' + e.message + ' — check Logs for details.';
+  }
+});
 
+/* ----- New conf/vendor ----- */
 els.btnAddConf.addEventListener('click', ()=> els.confDialog.showModal());
-els.btnAddVendor.addEventListener('click', async ()=>{ await loadConferences(els.newVendorConf); els.vendorDialog.showModal(); });
+els.btnAddVendor.addEventListener('click', async ()=>{ await populateConferences(els.newVendorConf); els.vendorDialog.showModal(); });
 
 els.btnCreateConf.addEventListener('click', async ()=>{
   try{
     const name = els.newConfName.value.trim(); if(!name) return alert('Please enter a conference name.');
     const sd = els.newConfStart.value || todayISO(); const ed = els.newConfEnd.value || sd;
-    const payload = { name, start_date: sd, end_date: ed };
-    const created = await apiFetch('/conferences', { method:'POST', body: JSON.stringify(payload) });
-    log('Conference created: ' + (created?.id || created?.name || 'ok'));
+    const created = await createConference({ name, start_date: sd, end_date: ed });
+    api.log('Conference created: ' + (created?.id || created?.name || 'ok'));
     els.confDialog.close();
-    await loadConferences(els.confSelect);
+    await populateConferences(els.confSelect);
     const cid = created?.id ?? created?._id ?? created?.uuid ?? created?.conferenceId;
     if(cid) els.confSelect.value = cid;
-    await loadVendorsForConference(els.confSelect.value, els.vendorSelect);
+    await populateVendorsForConference(els.confSelect.value, els.vendorSelect);
   }catch(e){ alert('Create conference failed: ' + e.message); }
 });
 els.btnCreateVendor.addEventListener('click', async ()=>{
   try{
     const name = els.newVendorName.value.trim(); const confId = els.newVendorConf.value;
     if(!name || !confId) return alert('Enter vendor name and select a conference.');
-    const created = await apiFetch('/vendors', { method:'POST', body: JSON.stringify({ name, conference_id: confId }) });
-    log('Vendor created: ' + (created?.id || created?.name || 'ok'));
+    const created = await createVendor({ name, conference_id: confId });
+    api.log('Vendor created: ' + (created?.id || created?.name || 'ok'));
     els.vendorDialog.close();
-    if(els.confSelect.value) await loadVendorsForConference(els.confSelect.value, els.vendorSelect);
+    if(els.confSelect.value) await populateVendorsForConference(els.confSelect.value, els.vendorSelect);
     const vid = created?.id ?? created?._id ?? created?.uuid ?? created?.vendorId;
     if(vid) els.vendorSelect.value = vid;
   }catch(e){ alert('Create vendor failed: ' + e.message); }
 });
 
-els.confSelect.addEventListener('change', async ()=>{ await loadVendorsForConference(els.confSelect.value, els.vendorSelect); });
+els.confSelect.addEventListener('change', async ()=>{ await populateVendorsForConference(els.confSelect.value, els.vendorSelect); });
 
-els.imageInput.addEventListener('change', (e)=>{ imageFiles = imageFiles.concat(Array.from(e.target.files || [])); renderImagePreview(); });
-
+/* ----- Start/Stop & Upload ----- */
 els.btnStart.addEventListener('click', async ()=>{
-  if(!store.api){ return alert('Configure API first.'); }
+  if(!getConfig()) { return alert('Configure API first.'); }
   els.btnStart.disabled = true; els.btnStop.disabled = false;
-  try{ await startRecording(); log('Session started. Recording in progress.'); }
+  try{ await startRecording(); api.log('Session started. Recording in progress.'); }
   catch(e){ els.btnStart.disabled=false; els.btnStop.disabled=true; alert('Cannot start recording: ' + e.message); }
 });
+
 els.btnStop.addEventListener('click', async ()=>{
   els.btnStop.disabled = true;
   try{
     const audioBlob = await stopRecordingGetBlob();
     if(!audioBlob) throw new Error('No audio captured.');
 
-    // Let uploadSession handle Unknown conference/vendor creation
+    let conferenceId = els.confSelect.value || null;
+    let vendorId = els.vendorSelect.value || null;
+
+    // Ensure conference & vendor
+    ({ conferenceId, vendorId } = await ensureConferenceVendor({ conferenceId, vendorId, preferredVendorName: 'Unknown Vendor' }));
+
+    // Build payload (API module handles mapping & fallback)
     const sessionId = await uploadSession({
-      audioBlob, images: imageFiles, notes: els.notes.value,
-      conferenceId: els.confSelect.value || null,
-      vendorId: els.vendorSelect.value || null
+      audioBlob,
+      images: imageFiles,
+      text: els.notes.value, // IMPORTANT: pass as text (not notes)
+      conferenceId,
+      vendorId,
+      startIso: sessionStartIso || new Date().toISOString(),
+      endIso: sessionEndIso || sessionStartIso || new Date().toISOString()
     });
+
+    els.pillSession.textContent = sessionId;
     alert('Uploaded! Session ID: ' + sessionId + '\nEnrichment started.');
   }catch(e){ alert('Upload failed: ' + e.message); }
   finally{
-    els.btnStart.disabled = false; imageFiles = []; renderImagePreview(); els.notes.value='';
+    els.btnStart.disabled = false; imageFiles = []; renderImagePreview(); els.notes.value=''; resetRecording();
   }
 });
 
+/* ----- Previous sessions ----- */
 els.btnPrevious.addEventListener('click', async ()=>{
-  await loadConferences(els.prevConf);
-  if(els.prevConf.value) await loadVendorsForConference(els.prevConf.value, els.prevVendor);
+  await populateConferences(els.prevConf);
+  if(els.prevConf.value) await populateVendorsForConference(els.prevConf.value, els.prevVendor);
   document.querySelectorAll('h2')[1]?.scrollIntoView({behavior:'smooth'});
 });
 els.prevConf.addEventListener('change', async ()=>{
-  await loadVendorsForConference(els.prevConf.value, els.prevVendor);
+  await populateVendorsForConference(els.prevConf.value, els.prevVendor);
 });
 els.btnLoadSessions.addEventListener('click', async ()=>{
   await loadPrevious(els.prevConf.value || null, els.prevVendor.value || null);
 });
 
-/* Closeable dialogs with Esc */
+/* ----- Logs dialog buttons ----- */
+els.logVerbosity.addEventListener('change', showLogs);
+els.btnCopyLogs.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(els.logsView.textContent || ''); alert('Logs copied'); } catch(_){ alert('Copy failed. Select text and copy.'); } });
+
+/* ----- Dialogs esc-close ----- */
 for(const d of [els.authDialog, els.confDialog, els.vendorDialog, els.detailDialog, els.logsDialog, els.selfTestDialog]){
   d?.addEventListener('cancel', e=>{ e.preventDefault(); d.close(); });
 }
 
-/* Boot */
+/* ----- Boot ----- */
 async function boot(){
-  if(!store.api){
-    store.api = {
-      url: 'https://conference-buddy-geoutils.replit.app/api',
-      key: '', mode: 'xapikey', param: 'apiKey'
-    };
-  }
-  const cfg = store.api;
-  if(cfg){
-    setConnected(true);
-    try{
-      await loadConferences(els.confSelect);
-      if(els.confSelect.value) await loadVendorsForConference(els.confSelect.value, els.vendorSelect);
-      await loadConferences(els.prevConf);
-      if(els.prevConf.value) await loadVendorsForConference(els.prevConf.value, els.prevVendor);
-      log('Dropdowns populated from API.');
-      if(!els.confSelect.options.length || !els.confSelect.value) log('No conference selected. You can record without selecting; we’ll use “Unknown Conference”.', 'warn');
-    }catch(e){ log('Could not load initial data: ' + e.message, 'error'); }
-  }else{
-    setConnected(false);
-    els.authDialog.showModal();
-  }
+  const cfg = getConfig() || { url: 'https://conference-buddy-geoutils.replit.app/api', key: '', mode:'xapikey', param:'apiKey' };
+  setConfig(cfg);
+  els.apiStatus.textContent = cfg.key ? 'Connected' : 'Disconnected';
+  try{
+    await populateConferences(els.confSelect);
+    if(els.confSelect.value) await populateVendorsForConference(els.confSelect.value, els.vendorSelect);
+    await populateConferences(els.prevConf);
+    if(els.prevConf.value) await populateVendorsForConference(els.prevConf.value, els.prevVendor);
+    api.log('Dropdowns populated from API.');
+    if(!els.confSelect.options.length || !els.confSelect.value) api.log('No conference selected. You can record without selecting; we’ll use “Unknown Conference”.', 'warn');
+  }catch(e){ api.log('Could not load initial data: ' + e.message, 'error'); }
 }
 boot();
 </script>
+
+<!-- API module -->
+<script type="module" src="./cb-api.js"></script>
 </body>
-</html>
+  </html>
