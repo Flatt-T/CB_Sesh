@@ -89,9 +89,9 @@
     <span id="apiStatus" class="chip">Disconnected</span>
   </div>
   <div class="toolbar">
-    <button id="btnOpenAuth" class="ghost">API</button>
-    <button id="btnLogs" class="ghost" title="View & export logs">Logs</button>
-    <button id="btnSelfTest" class="ghost" title="Run API self-test">Self-Test</button>
+    <button id="btnOpenAuth" class="ghost" type="button">API</button>
+    <button id="btnLogs" class="ghost" title="View & export logs" type="button">Logs</button>
+    <button id="btnSelfTest" class="ghost" title="Run API self-test" type="button">Self-Test</button>
   </div>
 </header>
 
@@ -120,9 +120,9 @@
     </div>
 
     <div class="row" style="margin-top:8px">
-      <button id="btnStart" class="primary">▶ Start (audio begins)</button>
-      <button id="btnStop" class="danger" disabled>■ Stop & Upload</button>
-      <button id="btnPrevious" class="ghost">📜 Previous Sessions</button>
+      <button id="btnStart" class="primary" type="button">▶ Start (audio begins)</button>
+      <button id="btnStop" class="danger"  type="button" disabled>■ Stop & Upload</button>
+      <button id="btnPrevious" class="ghost" type="button">📜 Previous Sessions</button>
     </div>
 
     <div class="row" style="margin-top:8px">
@@ -152,7 +152,7 @@
       <div><label>Vendor</label><select id="prevVendor"></select></div>
     </div>
     <div class="row" style="margin-top:8px">
-      <button id="btnLoadSessions" class="ghost">Load</button>
+      <button id="btnLoadSessions" class="ghost" type="button">Load</button>
     </div>
     <div id="prevList" style="margin-top:8px;display:grid;gap:8px"></div>
   </section>
@@ -169,9 +169,9 @@
   <div class="row" style="justify-content:space-between;align-items:center">
     <h2 style="margin:0">API Settings</h2>
     <div class="dialog-toolbar">
-      <button id="btnTest" class="ghost">Test</button>
-      <button id="btnSave" class="primary">Save</button>
-      <button id="btnCloseAuth" class="ghost">Close</button>
+      <button id="btnTest" class="ghost" type="button">Test</button>
+      <button id="btnSave" class="primary" type="button">Save</button>
+      <button id="btnCloseAuth" class="ghost" type="button">Close</button>
     </div>
   </div>
   <label>Backend API Base URL</label>
@@ -206,10 +206,10 @@
         <option value="compact">Compact</option>
         <option value="verbose">Verbose</option>
       </select>
-      <button id="btnCopyLogs" class="ghost">Copy</button>
-      <button id="btnDownloadTxt" class="ghost">.txt</button>
-      <button id="btnDownloadJson" class="ghost">.json</button>
-      <button id="btnCloseLogs" class="ghost">Close</button>
+      <button id="btnCopyLogs" class="ghost" type="button">Copy</button>
+      <button id="btnDownloadTxt" class="ghost" type="button">.txt</button>
+      <button id="btnDownloadJson" class="ghost" type="button">.json</button>
+      <button id="btnCloseLogs" class="ghost" type="button">Close</button>
     </div>
   </div>
   <div id="logsView" class="dialog-status" style="min-height:260px;max-height:60vh"></div>
@@ -220,8 +220,8 @@
   <div class="row" style="justify-content:space-between;align-items:center">
     <h2 style="margin:0">API Self-Test Suite</h2>
     <div class="row">
-      <button id="btnRunSelfTest" class="primary">Run Tests</button>
-      <button id="btnCloseSelfTest" class="ghost">Close</button>
+      <button id="btnRunSelfTest" class="primary" type="button">Run Tests</button>
+      <button id="btnCloseSelfTest" class="ghost" type="button">Close</button>
     </div>
   </div>
   <p class="muted">Runs: OPTIONS, /health, list/create conference, list/create vendor, upload (multipart → fallback JSON) with start/end/duration, enrich, fetch session/report.</p>
@@ -232,7 +232,7 @@
 <dialog id="confDialog"><div class="dialog-card">
   <div class="row" style="justify-content:space-between;align-items:center">
     <h2 style="margin:0">New Conference</h2>
-    <button class="ghost" onclick="document.getElementById('confDialog').close()">Close</button>
+    <button class="ghost" onclick="document.getElementById('confDialog').close()" type="button">Close</button>
   </div>
   <label>Name</label><input id="newConfName" placeholder="e.g., DEF CON 33" />
   <div class="grid2">
@@ -240,7 +240,7 @@
     <div><label>End Date</label><input id="newConfEnd" type="date" /></div>
   </div>
   <div class="row" style="justify-content:flex-end;margin-top:8px">
-    <button id="btnCreateConf" class="primary">Create</button>
+    <button id="btnCreateConf" class="primary" type="button">Create</button>
   </div>
 </div></dialog>
 
@@ -248,12 +248,12 @@
 <dialog id="vendorDialog"><div class="dialog-card">
   <div class="row" style="justify-content:space-between;align-items:center">
     <h2 style="margin:0">New Vendor</h2>
-    <button class="ghost" onclick="document.getElementById('vendorDialog').close()">Close</button>
+    <button class="ghost" onclick="document.getElementById('vendorDialog').close()" type="button">Close</button>
   </div>
   <label>Vendor Name</label><input id="newVendorName" placeholder="e.g., Acme Robotics" />
   <label>Link to Conference</label><select id="newVendorConf"></select>
   <div class="row" style="justify-content:flex-end;margin-top:8px">
-    <button id="btnCreateVendor" class="primary">Create</button>
+    <button id="btnCreateVendor" class="primary" type="button">Create</button>
   </div>
 </div></dialog>
 
@@ -472,7 +472,7 @@ async function loadPrevious(conferenceId, vendorId){
     div.innerHTML = `
       <div class="row" style="justify-content:space-between;align-items:center">
         <div><strong>Session ${sid}</strong> <span class="muted">• ${status}${when?` • ${when}`:''}</span></div>
-        <button class="ghost" data-sid="${sid}">Open</button>
+        <button class="ghost" data-sid="${sid}" type="button">Open</button>
       </div>`;
     div.querySelector('button').addEventListener('click', ()=> openSessionDetail(sid));
     els.prevList.appendChild(div);
@@ -500,7 +500,7 @@ async function openSessionDetail(sessionId){
   document.getElementById('detailContainer').innerHTML = `
     <div class="row" style="justify-content:space-between;align-items:center">
       <h2 style="margin:0">Session ${sessionId}</h2>
-      <button class="ghost" onclick="document.getElementById('detailDialog').close()">Close</button>
+      <button class="ghost" onclick="document.getElementById('detailDialog').close()" type="button">Close</button>
     </div>
     <div class="grid2">
       <div class="section"><strong>Files</strong>${filesHtml}</div>
@@ -683,5 +683,8 @@ async function boot(){
 }
 boot();
 </script>
+<script src="cb-api.js?v=7" defer></script>
+<!-- <script src="app.js?v=1" defer></script> <!-- if you split; otherwise leave your inline script -->
+
 </body>
 </html>
