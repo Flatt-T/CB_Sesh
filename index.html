@@ -93,7 +93,6 @@
     </div>
     <span id="apiStatus" class="chip">Disconnected</span>
   </div>
-  <!-- Top toolbar with buttons across the top -->
   <div class="toolbar">
     <button id="btnOpenAuth" class="ghost">API</button>
     <button id="btnLogs" class="ghost" title="View & export logs">Logs</button>
@@ -121,7 +120,7 @@
           <select id="vendorSelect" aria-label="Vendor"></select>
           <button id="btnAddVendor" class="ghost">+ New</button>
         </div>
-        <small class="muted">Optional; blank ⇒ “Unknown Vendor”.</small>
+        <small class="muted">Optional; blank ⇒ “Unknown Vendor” (scoped to chosen conference).</small>
       </div>
     </div>
 
@@ -432,7 +431,7 @@ async function apiFetch(path, opts={}){
     if ((e?.status === 415 || (e?.status === 500 && String(e.body||'').includes('Unsupported Media Type'))) && opts.body instanceof FormData) {
       try {
         const asJson = await formDataToJsonPayload(opts.body);
-        log('Upload endpoint expects JSON — retrying as application/json with base64 media …', 'warn');
+        log('Server rejected multipart for /sessions/upload. Retrying with JSON payload (base64 + timing)…','warn');
         return await apiFetch(path, { ...opts, body: JSON.stringify(asJson) });
       } catch(re){ log('Retry-as-JSON failed to construct payload: ' + re.message, 'error'); }
     }
@@ -530,48 +529,71 @@ async function loadVendorsForConference(confId, selectEl){
   }
 }
 
-/* =================
-   Unknown placeholders
-   ================= */
-async function ensureUnknowns(){
-  const cached = store.unknown;
-  if(cached?.conferenceId && cached?.vendorId) return cached;
-
-  let confId = null, vendorId = null;
+/* ================================
+   Ensure conference & vendor exist
+   ================================ */
+async function getOrCreateUnknownConference(){
+  // Prefer existing "Unknown Conference"
   try{
     const conferences = await apiFetch('/conferences');
     const list = asArray(conferences);
     const unk = (list||[]).find(c => (c.name||'').toLowerCase() === 'unknown conference');
-    if(unk) confId = unk.id ?? unk._id ?? unk.uuid ?? unk.conferenceId;
+    if(unk) return (unk.id ?? unk._id ?? unk.uuid ?? unk.conferenceId);
   }catch(e){ log('Could not list conferences while searching for Unknown Conference: '+e.message,'warn'); }
+  // Create minimal dates
+  const payload = { name: 'Unknown Conference', start_date: todayISO(), end_date: todayISO() };
+  const created = await apiFetch('/conferences', { method:'POST', body: JSON.stringify(payload) });
+  const cid = created?.id ?? created?._id ?? created?.uuid ?? created?.conferenceId;
+  log(`Created Unknown Conference: ${cid}`);
+  return cid;
+}
 
-  if(!confId){
-    try{
-      const payload = { name: 'Unknown Conference', start_date: todayISO(), end_date: todayISO() };
-      const created = await apiFetch('/conferences', { method:'POST', body: JSON.stringify(payload) });
-      confId = created?.id ?? created?._id ?? created?.uuid ?? created?.conferenceId;
-      log(`Created Unknown Conference: ${confId}`);
-    }catch(e){ log('Failed to create Unknown Conference: '+e.message,'error'); throw e; }
-  }
-
+async function getOrCreateVendorByName(conferenceId, name){
+  // Look for vendor by name in this conference
   try{
-    const vendors = await apiFetch(`/conferences/${encodeURIComponent(confId)}/vendors`);
+    const vendors = await apiFetch(`/conferences/${encodeURIComponent(conferenceId)}/vendors`);
     const list = asArray(vendors);
-    const uv = (list||[]).find(v => (v.name||'').toLowerCase() === 'unknown vendor');
-    if(uv) vendorId = uv.id ?? uv._id ?? uv.uuid ?? uv.vendorId;
-  }catch(e){ log('Could not list vendors for Unknown Conference: '+e.message,'warn'); }
+    const found = (list||[]).find(v => (v.name||'').toLowerCase() === (name||'').toLowerCase());
+    if(found) return (found.id ?? found._id ?? found.uuid ?? found.vendorId);
+  }catch(e){ log(`Could not list vendors for conference ${conferenceId}: `+e.message,'warn'); }
+  // Create
+  const created = await apiFetch('/vendors', { method:'POST', body: JSON.stringify({ name, conference_id: conferenceId }) });
+  const vid = created?.id ?? created?._id ?? created?.uuid ?? created?.vendorId;
+  log(`Created Vendor "${name}" for conference ${conferenceId}: ${vid}`);
+  return vid;
+}
 
-  if(!vendorId){
-    try{
-      const createdV = await apiFetch('/vendors', { method:'POST', body: JSON.stringify({ name: 'Unknown Vendor', conference_id: confId }) });
-      vendorId = createdV?.id ?? createdV?._id ?? createdV?.uuid ?? createdV?.vendorId;
-      log(`Created Unknown Vendor: ${vendorId}`);
-    }catch(e){ log('Failed to create Unknown Vendor: '+e.message,'error'); throw e; }
+/**
+ * Ensure a consistent pair: conferenceId + vendorId
+ * Rules:
+ *  - If no conference chosen, use/create "Unknown Conference"
+ *  - If vendorId missing, create/find "Unknown Vendor" within the resolved conference
+ *  - If vendorId supplied: validate it exists and (if possible) matches the conference; otherwise create a scoped vendor
+ */
+async function ensureConferenceVendor({conferenceId, vendorId, preferredVendorName}){
+  // 1) Resolve conference
+  if(!conferenceId){
+    conferenceId = await getOrCreateUnknownConference();
   }
 
-  const out = { conferenceId: confId, vendorId };
-  store.unknown = out;
-  return out;
+  // 2) Vendor path
+  if(vendorId){
+    try{
+      const v = await apiFetch(`/vendors/${encodeURIComponent(vendorId)}`);
+      const vcid = v?.conference_id ?? v?.conferenceId ?? null;
+      if (vcid && conferenceId && String(vcid) !== String(conferenceId)) {
+        log(`Vendor ${vendorId} belongs to a different conference (${vcid} != ${conferenceId}). Creating scoped vendor.`, 'warn');
+        vendorId = await getOrCreateVendorByName(conferenceId, preferredVendorName || 'Unknown Vendor');
+      }
+    }catch(e){
+      log(`Provided vendor ID ${vendorId} not found. Creating vendor instead.`, 'warn');
+      vendorId = await getOrCreateVendorByName(conferenceId, preferredVendorName || 'Unknown Vendor');
+    }
+  } else {
+    vendorId = await getOrCreateVendorByName(conferenceId, preferredVendorName || 'Unknown Vendor');
+  }
+
+  return { conferenceId, vendorId };
 }
 
 /* =================
@@ -639,6 +661,10 @@ function secondsBetweenISO(startIso, endIso){
 }
 
 async function uploadSession({audioBlob, images, notes, conferenceId, vendorId}){
+  // First, ensure the pair is valid and scoped
+  const ensured = await ensureConferenceVendor({ conferenceId, vendorId });
+  conferenceId = ensured.conferenceId; vendorId = ensured.vendorId;
+
   const startIso = sessionStartIso || new Date().toISOString();
   const endIso   = sessionEndIso   || startIso;
   const duration = secondsBetweenISO(startIso, endIso);
@@ -650,8 +676,8 @@ async function uploadSession({audioBlob, images, notes, conferenceId, vendorId})
   if(notes) fd.append('notes', notes);
 
   // IDs (both cases)
-  if(conferenceId){ fd.append('conference_id', conferenceId); fd.append('conferenceId', conferenceId); }
-  if(vendorId){ fd.append('vendor_id', vendorId); fd.append('vendorId', vendorId); }
+  fd.append('conference_id', conferenceId); fd.append('conferenceId', conferenceId);
+  fd.append('vendor_id', vendorId);         fd.append('vendorId', vendorId);
 
   // Timing metadata (both cases)
   fd.append('start_time', startIso); fd.append('startTime', startIso);
@@ -681,7 +707,6 @@ async function uploadSession({audioBlob, images, notes, conferenceId, vendorId})
     catch(e){ log(`Warning: could not trigger enrichment automatically — ${e.message}`,'warn'); }
     return sessionId;
   } finally {
-    // reset recording UI state but keep IDs visible
     resetRecording();
   }
 }
@@ -794,7 +819,7 @@ async function runSelfTest(){
     const vRes = await apiFetch('/vendors', { method:'POST', body: JSON.stringify({ name: 'CB SelfTest Vendor', conference_id: cid }) });
     const vid = vRes.id ?? vRes._id ?? vRes.uuid ?? vRes.vendorId; writeSelf(`POST /vendors ✓ id=${vid}`);
 
-    const st = new Date().toISOString(); // pretend started now
+    const st = new Date().toISOString();
     const silent = mkSilentWav(1,8000);
     const upload = new FormData();
     upload.append('audio', silent, 'selftest.wav');
@@ -820,8 +845,10 @@ async function runSelfTest(){
 /* =================
    Events & Boot
    ================= */
+function setConnected(on){ els.apiStatus.textContent = on?'Connected':'Disconnected'; }
+
 els.btnOpenAuth.addEventListener('click', ()=>{
-  const cfg = store.api || { url:'https://495c2d21-c9d4-4b7a-a885-9e9b22d936af-00-3kg4e5ukszg8i.riker.replit.dev/api', key:'', mode:'xapikey', param:'apiKey' };
+  const cfg = store.api || { url:'https://conference-buddy-geoutils.replit.app/api', key:'', mode:'xapikey', param:'apiKey' };
   els.apiUrl.value = cfg.url || '';
   els.apiKey.value = cfg.key || '';
   els.authMode.value = cfg.mode || 'xapikey';
@@ -913,12 +940,9 @@ els.btnStop.addEventListener('click', async ()=>{
     let conferenceId = els.confSelect.value || null;
     let vendorId = els.vendorSelect.value || null;
 
-    if(!conferenceId || !vendorId){
-      const unk = await ensureUnknowns();
-      conferenceId = conferenceId || unk.conferenceId;
-      vendorId = vendorId || unk.vendorId;
-      log(`Using unknown placeholders — conference: ${conferenceId}, vendor: ${vendorId}`);
-    }
+    // Make sure the vendor exists for this conference (or unknown)
+    const ensured = await ensureConferenceVendor({ conferenceId, vendorId });
+    conferenceId = ensured.conferenceId; vendorId = ensured.vendorId;
 
     const sessionId = await uploadSession({
       audioBlob, images: imageFiles, notes: els.notes.value,
@@ -946,13 +970,13 @@ for(const d of [els.authDialog, els.confDialog, els.vendorDialog, els.detailDial
 async function boot(){
   if(!store.api){
     store.api = {
-      url: 'https://495c2d21-c9d4-4b7a-a885-9e9b22d936af-00-3kg4e5ukszg8i.riker.replit.dev/api',
+      url: 'https://conference-buddy-geoutils.replit.app/api',
       key: '', mode: 'xapikey', param: 'apiKey'
     };
   }
   const cfg = store.api;
   if(cfg){
-    els.apiStatus.textContent = 'Connected';
+    setConnected(true);
     try{
       await loadConferences(els.confSelect);
       if(els.confSelect.value) await loadVendorsForConference(els.confSelect.value, els.vendorSelect);
@@ -962,11 +986,11 @@ async function boot(){
       if(!els.confSelect.options.length) log('No conferences yet. You can record without selecting; we’ll use “Unknown Conference”.', 'warn');
     }catch(e){ log('Could not load initial data: ' + e.message, 'error'); }
   }else{
-    els.apiStatus.textContent = 'Disconnected';
+    setConnected(false);
     els.authDialog.showModal();
   }
 }
 boot();
 </script>
 </body>
-  </html>
+</html>
