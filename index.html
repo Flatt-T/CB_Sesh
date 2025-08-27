@@ -21,18 +21,20 @@
   }
   ::selection{background:var(--selection);color:#fff}
   a{color:var(--accent)}
-  .wrap{max-width:720px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:12px}
+  /* Make room under sticky header on small screens */
+  body { padding-top: 56px; }
   header{
-    position:sticky;top:0;z-index:40;
-    background:linear-gradient(180deg,rgba(10,16,32,.95),rgba(10,16,32,.75));
+    position:fixed;left:0;right:0;top:0;z-index:50;
+    background:linear-gradient(180deg,rgba(10,16,32,.95),rgba(10,16,32,.85));
     backdrop-filter:blur(8px);
     border-bottom:1px solid var(--border)
   }
-  .hbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 6px}
+  .wrap{max-width:740px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:12px}
+  .hbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 8px}
   .brand{display:flex;gap:8px;align-items:center}
-  .badge,.chip{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:4px 8px}
+  .badge,.chip{font-size:12px;border:1px solid var(--border);border-radius:999px;padding:6px 10px}
   .badge{background:#0b1a3a;color:#c5d7ff}.chip{color:#b9caf2}
-  button,input,select,textarea{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);outline:none}
+  button,input,select,textarea{width:100%;padding:14px;border-radius:14px;border:1px solid var(--border);background:var(--bg2);color:var(--fg);outline:none}
   button{cursor:pointer}
   button.primary{background:linear-gradient(180deg,var(--accent),var(--accent2));border:none;color:#fff;font-weight:700}
   button.ghost{background:transparent;border:1px solid var(--border)}
@@ -43,16 +45,17 @@
   label{font-size:12px;color:#9bb3e0;display:block;margin:6px 0 6px}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .pill{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;background:#0d2048;border:1px solid var(--border);border-radius:999px;color:#bcd1ff;font-size:12px}
+  @media(max-width:460px){ .grid2{grid-template-columns:1fr} }
+  .pill{display:inline-flex;gap:6px;align-items:center;padding:6px 12px;background:#0d2048;border:1px solid var(--border);border-radius:999px;color:#bcd1ff;font-size:12px}
   .status{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;background:#0b152c;border:1px solid var(--border);border-radius:12px;padding:10px;max-height:40vh;overflow:auto}
   .muted{color:#9bb3e0}
-  .thumb{width:88px;height:88px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
+  .thumb{width:92px;height:92px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
   .thumbwrap{position:relative}
   .removebtn{position:absolute;top:4px;right:4px;background:#0008;border:1px solid var(--border);color:#fff;border-radius:999px;padding:2px 6px;font-size:12px}
   .preview{display:flex;gap:8px;flex-wrap:wrap}
-  .sticky-controls{position:sticky;top:54px;z-index:35}
-  #notes{min-height:240px}
-  @media(min-width:900px){.wrap{max-width:1100px} #notes{min-height:280px}}
+  .sticky-controls{position:sticky;top:-6px;z-index:40;padding-top:6px;background:linear-gradient(180deg,rgba(12,20,40,.8),rgba(12,20,40,0));backdrop-filter:blur(2px)}
+  #notes{min-height:280px}
+  @media(min-width:900px){.wrap{max-width:1100px} #notes{min-height:320px}}
 
   /* Dialogs: white, readable */
   dialog{border:none;border-radius:18px;padding:0;background:transparent;color:inherit}
@@ -95,7 +98,7 @@
         <div>
           <label>Conference</label>
           <div class="row">
-            <select id="confSelect"></select>
+            <select id="confSelect" aria-label="Conference"></select>
             <button id="btnAddConf" class="ghost">+ New</button>
           </div>
           <small class="muted">Optional; blank ⇒ “Unknown Conference”.</small>
@@ -103,7 +106,7 @@
         <div>
           <label>Vendor</label>
           <div class="row">
-            <select id="vendorSelect"></select>
+            <select id="vendorSelect" aria-label="Vendor"></select>
             <button id="btnAddVendor" class="ghost">+ New</button>
           </div>
           <small class="muted">Optional; blank ⇒ “Unknown Vendor”.</small>
@@ -216,7 +219,7 @@
       <button id="btnCloseSelfTest" class="ghost">Close</button>
     </div>
   </div>
-  <p class="muted">Runs: OPTIONS probe, /health, list/create conference (JSON w/ dates), list/create vendor (JSON w/ conference_id), upload (multipart), enrich, fetch session/report. Uses your configured URL + key.</p>
+  <p class="muted">Runs: OPTIONS probe, /health, list/create conference (JSON w/ dates), list/create vendor (JSON w/ conference_id), upload (multipart → auto-fallback to JSON), enrich, fetch session/report. Uses your configured URL + key.</p>
   <div id="selfTestOutput" class="dialog-status" style="min-height:220px;max-height:60vh"></div>
 </div></dialog>
 
@@ -460,21 +463,21 @@ async function apiFetch(path, opts={}){
     if(!res.ok){
       const err = new Error(`HTTP ${res.status} ${res.statusText}${bodySample ? ' — ' + bodySample : ''}`);
       err.status = res.status;
+      err.body = bodySample || '';
       throw err;
     }
     if(ct.includes('application/json')) return res.json();
     return res.blob();
   }catch(e){
     // Optional 415 recovery (FormData->JSON if safe)
-    if (e?.status === 415 && opts.body instanceof FormData) {
+    if ((e?.status === 415 || (e?.status === 500 && String(e.body||'').includes("Unsupported Media Type"))) && opts.body instanceof FormData) {
       try {
-        const obj = {}; let hasBlob = false;
-        for (const [k, v] of opts.body.entries()) { if (v instanceof Blob) hasBlob = true; obj[k] = v; }
-        if (!hasBlob) {
-          log('415 received — retrying as application/json …', 'warn');
-          return await apiFetch(path, { ...opts, body: JSON.stringify(obj) });
-        }
-      } catch(_) {}
+        const asJson = await formDataToJsonPayload(opts.body);
+        log('Upload endpoint expects JSON — retrying as application/json with base64 media …', 'warn');
+        return await apiFetch(path, { ...opts, body: JSON.stringify(asJson) });
+      } catch(re){
+        log('Retry-as-JSON failed to construct payload: ' + re.message, 'error');
+      }
     }
     netErr(ctx, e);
     throw e;
@@ -489,6 +492,40 @@ function asArray(maybe){
     if (Array.isArray(maybe.items)) return maybe.items;
   }
   return [];
+}
+
+/* --- File helpers: base64 JSON fall-back --- */
+function readBlobAsDataURL(blob){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onerror = ()=>reject(new Error('FileReader error'));
+    r.onload = ()=>resolve(String(r.result||''));
+    r.readAsDataURL(blob);
+  });
+}
+async function formDataToJsonPayload(fd){
+  const payload = { images: [], audio: null };
+  const plain = {};
+  for (const [k, v] of fd.entries()){
+    if (v instanceof Blob){
+      const isAudio = k.toLowerCase().includes('audio');
+      const dataUrl = await readBlobAsDataURL(v); // "data:TYPE;base64,XXXX"
+      const [meta, b64] = dataUrl.split(',', 2);
+      const contentType = (meta.match(/^data:(.*?);base64$/)||[])[1] || (v.type||'application/octet-stream');
+      const fileObj = { filename: (v.name||('file.'+(contentType.split('/')[1]||'bin'))), content_type: contentType, data: b64 };
+      if (isAudio) payload.audio = fileObj; else payload.images.push(fileObj);
+    } else {
+      plain[k] = v;
+    }
+  }
+  // copy text fields into both snake_case and camelCase for maximized compatibility
+  const confId = plain.conference_id || plain.conferenceId || '';
+  const vendId = plain.vendor_id || plain.vendorId || '';
+  const notes = plain.notes || '';
+  if (confId){ payload.conference_id = confId; payload.conferenceId = confId; }
+  if (vendId){ payload.vendor_id = vendId; payload.vendorId = vendId; }
+  if (notes){ payload.notes = notes; }
+  return payload;
 }
 
 /* --- Dropdowns --- */
@@ -609,26 +646,44 @@ function renderImagePreview(){
 }
 els.imageInput.addEventListener('change', (e)=>{ imageFiles = imageFiles.concat(Array.from(e.target.files || [])); renderImagePreview(); });
 
-/* --- Upload & Enrich --- */
+/* --- Upload & Enrich (dual-mode) --- */
 async function uploadSession({audioBlob, images, notes, conferenceId, vendorId}){
+  // 1) Try multipart first
   const fd = new FormData();
   if(audioBlob) fd.append('audio', audioBlob, `session.${(audioBlob.type.split('/')[1]||'webm').split(';')[0]}`);
   for(const f of images){ fd.append('images', f, f.name); }
   if(notes) fd.append('notes', notes);
-  // Include both snake_case and camelCase for compatibility
   if(conferenceId){ fd.append('conference_id', conferenceId); fd.append('conferenceId', conferenceId); }
   if(vendorId){ fd.append('vendor_id', vendorId); fd.append('vendorId', vendorId); }
 
-  const res = await apiFetch('/sessions/upload', { method:'POST', body: fd });
-  const sessionId = res.id ?? res.sessionId ?? res._id ?? res.uuid;
-  if(!sessionId) throw new Error('Upload succeeded but response did not include a session ID.');
-  log(`Uploaded. Session ID: ${sessionId}`); els.pillSession.textContent = sessionId;
-
   try{
-    await apiFetch(`/sessions/${encodeURIComponent(sessionId)}/enrich`, { method:'POST' });
-    log('Enrichment triggered.');
-  }catch(e){ log(`Warning: could not trigger enrichment automatically — ${e.message}`,'warn'); }
-  return sessionId;
+    const res = await apiFetch('/sessions/upload', { method:'POST', body: fd });
+    const sessionId = res.id ?? res.sessionId ?? res._id ?? res.uuid;
+    if(!sessionId) throw new Error('Upload succeeded but response did not include a session ID.');
+    log(`Uploaded. Session ID: ${sessionId}`); els.pillSession.textContent = sessionId;
+    try{
+      await apiFetch(`/sessions/${encodeURIComponent(sessionId)}/enrich`, { method:'POST' });
+      log('Enrichment triggered.');
+    }catch(e){ log(`Warning: could not trigger enrichment automatically — ${e.message}`,'warn'); }
+    return sessionId;
+  }catch(err){
+    // 2) If the backend insists on JSON (415/“Unsupported Media Type”), retry as JSON with base64
+    const hint = String(err.body||err.message||'');
+    const isMediaTypeComplaint = err.status === 415 || (err.status === 500 && hint.includes('Unsupported Media Type'));
+    if (!isMediaTypeComplaint) throw err;
+
+    log('Server rejected multipart for /sessions/upload. Retrying with JSON payload (base64)…','warn');
+    const jsonPayload = await formDataToJsonPayload(fd);
+    const res = await apiFetch('/sessions/upload', { method:'POST', body: JSON.stringify(jsonPayload) });
+    const sessionId = res.id ?? res.sessionId ?? res._id ?? res.uuid;
+    if(!sessionId) throw new Error('Upload (JSON) succeeded but response did not include a session ID.');
+    log(`Uploaded (JSON). Session ID: ${sessionId}`); els.pillSession.textContent = sessionId;
+    try{
+      await apiFetch(`/sessions/${encodeURIComponent(sessionId)}/enrich`, { method:'POST' });
+      log('Enrichment triggered.');
+    }catch(e){ log(`Warning: could not trigger enrichment automatically — ${e.message}`,'warn'); }
+    return sessionId;
+  }
 }
 
 /* --- Previous sessions --- */
@@ -761,7 +816,7 @@ async function runSelfTest(){
     const vid = vRes.id ?? vRes._id ?? vRes.uuid ?? vRes.vendorId;
     writeSelf(`POST /vendors ✓ id=${vid}`);
 
-    // 6) upload session (silent wav)
+    // 6) upload session (silent wav) — will auto-fallback to JSON if needed
     const silent = mkSilentWav(1,8000);
     const upload = new FormData();
     upload.append('audio', silent, 'selftest.wav');
@@ -788,7 +843,7 @@ async function runSelfTest(){
 
 /* --- Events --- */
 els.btnOpenAuth.addEventListener('click', ()=>{
-  // Prefill with the known-good Replit base from your logs
+  // Prefill with your last known-good base (from your logs). Change anytime.
   const cfg = store.api || {
     url:'https://495c2d21-c9d4-4b7a-a885-9e9b22d936af-00-3kg4e5ukszg8i.riker.replit.dev/api',
     key:'', mode:'xapikey', param:'apiKey'
@@ -966,4 +1021,4 @@ async function boot(){
 boot();
 </script>
 </body>
-</html>
+  </html>
