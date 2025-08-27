@@ -877,7 +877,7 @@ els.btnRunSelfTest.addEventListener('click', runSelfTest);
 els.btnAddConf.addEventListener('click', ()=> els.confDialog.showModal());
 els.btnAddVendor.addEventListener('click', async ()=>{ await loadConferences(els.newVendorConf); els.vendorDialog.showModal(); });
 
-els.btnCreateConf addEventListener('click', async ()=>{
+els.btnCreateConf.addEventListener('click', async ()=>{
   try{
     const name = els.newConfName.value.trim(); if(!name) return alert('Please enter a conference name.');
     const sd = els.newConfStart.value || todayISO(); const ed = els.newConfEnd.value || sd;
@@ -905,8 +905,6 @@ els.btnCreateVendor.addEventListener('click', async ()=>{
 });
 
 els.confSelect.addEventListener('change', async ()=>{ await loadVendorsForConference(els.confSelect.value, els.vendorSelect); });
-
-els.imageInput.addEventListener('change', (e)=>{ imageFiles = imageFiles.concat(Array.from(e.target.files || [])); renderImagePreview(); });
 
 els.btnStart.addEventListener('click', async ()=>{
   if(!store.api){ return alert('Configure API first.'); }
