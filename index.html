@@ -1,543 +1,224 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<title>Conference Buddy — Session Recorder</title>
-<meta name="color-scheme" content="dark light"/>
-<style>
-:root{
-  --bg:#0b1020;--panel:#0f1a33;--text:#e8f0ff;--muted:#7aa0ff;--accent:#2e5cff;
-  --warn:#ffc861;--ok:#65d38c;--border:#1f2b4a;--ink:#0c1733;
+// cb-api.js — All API I/O + structured logging
+// Uses the API KB guidance:
+// - POST /api/sessions/upload accepts JSON (user_notes) or multipart; we use JSON first
+// - Then POST /api/sessions/:id/add-files with multipart (audio_files[], image_files[], notes?) for actual files
+// - Vendors/Conferences endpoints require JSON and X-API-Key
+// Ref KB: Session upload & add-files details.
+
+/* =========================== Logger =========================== */
+const __logs = [];
+function _stamp(){ return new Date().toISOString(); }
+function log(level, msg, extra){
+  const entry = { t: _stamp(), level: (level||'info'), msg: String(msg), extra: extra ?? '' };
+  __logs.push(entry);
+  // console side too, for dev
+  const fn = (level==='error'?'error':(level==='warn'?'warn':'log'));
+  console[fn](`[${entry.t}] ${entry.level.toUpperCase()} ${entry.msg} ${entry.extra?'- '+entry.extra:''}`);
 }
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Arial}
-a{color:var(--muted);text-decoration:none}
-.topbar{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,#0b1020 60%,#0b102000);padding:10px 8px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.badge{font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:999px;background:#0c1733}
-.muted{opacity:.75}
-.btn{border:none;border-radius:10px;background:var(--accent);color:#fff;padding:12px 14px;font-weight:600}
-.btn.secondary{background:#142653;border:1px solid var(--border)}
-.btn.ghost{background:transparent;border:1px solid var(--border)}
-.btn.warn{background:var(--warn);color:#1a1200}
-.btn.ok{background:var(--ok);color:#042113}
-.stack{display:grid;gap:10px}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px}
-.section-title{font-weight:700;margin:0 0 6px 0}
-.field{display:grid;gap:6px;margin:6px 0}
-select,textarea,input[type="text"],input[type="date"]{width:100%;background:var(--ink);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;outline:none}
-textarea{min-height:120px;resize:vertical}
-.grid-2{display:grid;gap:10px;grid-template-columns:1fr 1fr}
-@media (max-width:720px){.grid-2{grid-template-columns:1fr}}
-.sticky-actions{position:sticky;bottom:0;z-index:20;background:linear-gradient(0deg,#0b1020 60%,#0b102000);padding:10px 8px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap}
-.hint{font-size:12px;opacity:.8}
-.imgGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.thumb{position:relative;border:1px dashed var(--border);border-radius:10px;overflow:hidden;background:#0c1733;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center}
-.thumb img{max-width:100%;max-height:100%}
-.thumb button{position:absolute;top:6px;right:6px}
-.logs{white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:#0c1733;border:1px solid var(--border);border-radius:10px;padding:10px;max-height:40vh;overflow:auto}
-dialog{border:none;background:var(--panel);color:var(--text);border-radius:14px;max-width:min(560px,92vw);width:92vw}
-dialog::backdrop{background:rgba(0,0,0,.6)}
-.kbd{font-family:ui-monospace;background:#0c1733;border:1px solid var(--border);padding:2px 6px;border-radius:6px}
-</style>
-</head>
-<body>
-  <div class="topbar">
-    <strong style="margin-right:.4rem">Conference Buddy</strong>
-    <button class="btn ghost" id="btnOpenApi">API</button>
-    <button class="btn ghost" id="btnOpenLogs">Logs</button>
-    <button class="btn ghost" id="btnSelfTest">Self-Test</button>
-    <span id="connBadge" class="badge muted">Disconnected</span>
-  </div>
+function logsToJson(){ return [...__logs]; }
+function logsToText(){
+  return __logs.map(l=>`${l.t} [${l.level.toUpperCase()}] ${l.msg}${l.extra?` ${l.extra}`:''}`).join('\n');
+}
+function clearLogs(){ __logs.length = 0; }
 
-  <section class="stack" style="padding:10px 8px">
-    <div class="card">
-      <h3 class="section-title">Session Recorder</h3>
-      <div class="grid-2">
-        <div class="field">
-          <label>Conference</label>
-          <div class="row">
-            <select id="selConference"></select>
-            <button class="btn secondary" id="btnNewConf">+ New</button>
-          </div>
-          <div class="hint">Optional; empty = “Unknown Conference”.</div>
-        </div>
-        <div class="field">
-          <label>Vendor</label>
-          <div class="row">
-            <select id="selVendor"></select>
-            <button class="btn secondary" id="btnNewVendor">+ New</button>
-          </div>
-          <div class="hint">Optional; empty = “Unknown Vendor”.</div>
-        </div>
-      </div>
+/* =========================== Config =========================== */
+const LS_KEY = 'cb_cfg_v2';
+let CFG = { base:'', key:'' };
+function setConfig({ base, key }){
+  if(typeof base==='string') CFG.base = base.replace(/\/+$/,''); // drop trailing slash
+  if(typeof key==='string') CFG.key = key;
+  localStorage.setItem(LS_KEY, JSON.stringify(CFG));
+  log('info','Config updated.');
+}
+function getConfig(){
+  const s = localStorage.getItem(LS_KEY);
+  if(s){ try{ CFG = JSON.parse(s) || CFG; }catch{} }
+  return { ...CFG };
+}
+function assertConfig(){
+  const c = getConfig();
+  if(!c.base){ throw new Error('API base URL not configured.'); }
+  if(!c.key){ throw new Error('API key not configured.'); }
+  return c;
+}
 
-      <div class="row" style="margin:8px 0">
-        <button class="btn ok" id="btnStart">▶ Start</button>
-        <button class="btn warn" id="btnStop">■ Stop & Upload</button>
-        <button class="btn ghost" id="btnPrev">Previous Sessions</button>
-      </div>
+/* =========================== Helpers =========================== */
+const nowIso = ()=> new Date().toISOString();
+const ymd = (d)=> {
+  const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+};
 
-      <div class="row">
-        <span class="badge" id="badgeAudio">Audio: idle</span>
-        <span class="badge" id="badgeImages">Images: 0</span>
-        <span class="badge" id="badgeSession">Session ID: —</span>
-      </div>
+async function apiFetch(path, { method='GET', headers={}, body=null, raw=false }={}){
+  const { base, key } = assertConfig();
+  const url = `${base}${path.startsWith('/')?'': '/'}${path}`;
+  const reqId = Math.random().toString(36).slice(2,9);
 
-      <div class="field" style="margin-top:10px">
-        <label>Notes (saved as <code>user_notes</code>)</label>
-        <textarea id="txtNotes" placeholder="Quick notes…"></textarea>
-      </div>
+  const hdrs = new Headers(headers || {});
+  if(!hdrs.has('X-API-Key')) hdrs.set('X-API-Key', key);
 
-      <div class="field">
-        <label>Photos</label>
-        <div class="imgGrid" id="imgGrid"></div>
-        <div class="row">
-          <input id="filePhotos" type="file" accept="image/*" capture="environment" multiple style="display:none"/>
-          <button class="btn secondary" id="btnAddPhoto">Add photo</button>
-          <span class="hint">Tap to add; remove with <span class="kbd">×</span>.</span>
-        </div>
-      </div>
-    </div>
+  log('info',`HTTP ${method} ${url}`, '→ request');
+  log('info', JSON.stringify({ id:reqId, method, url, reqHeaders:Object.fromEntries(hdrs.entries()) }));
 
-    <div class="card">
-      <h3 class="section-title">Previous Sessions</h3>
-      <div class="grid-2">
-        <div class="field"><label>Conference</label><select id="selPrevConf"></select></div>
-        <div class="field"><label>Vendor</label><select id="selPrevVendor"></select></div>
-      </div>
-      <div class="row"><button class="btn" id="btnLoadPrev">Load</button></div>
-      <div class="stack" id="prevList" style="margin-top:8px"></div>
-    </div>
+  const res = await fetch(url, { method, headers: hdrs, body });
+  const text = await res.text();
+  log('info',`HTTP ${method} ${url}`, `← ${res.status} ${res.statusText} (${res.headers.get('content-length')||''?'' : ''})`);
+  let data = null;
+  try{ data = text ? JSON.parse(text) : null; }catch{ data = text; }
+  log('info', JSON.stringify({
+    id:reqId, dur: undefined, status: res.status,
+    resHeaders: Object.fromEntries(res.headers.entries()), body: typeof data==='string'?data:JSON.stringify(data)+"\n"
+  }));
 
-    <div class="card">
-      <h3 class="section-title">Status & Diagnostics</h3>
-      <div id="status">Ready.</div>
-    </div>
-  </section>
+  if(!res.ok){
+    const err = new Error(`HTTP ${res.status} ${res.statusText} — ${typeof data==='string'?data:JSON.stringify(data)}`);
+    log('error',`HTTP ${method} ${url}`, `✖ ${err.message}`);
+    throw err;
+  }
+  return data;
+}
 
-  <div class="sticky-actions">
-    <button class="btn ghost" id="btnExportTxt">Export Logs (.txt)</button>
-    <button class="btn ghost" id="btnExportJson">Export Logs (.json)</button>
-    <span class="hint">API panel stores Base URL & Key locally.</span>
-  </div>
+/* =========================== Conferences =========================== */
+async function listConferences(){
+  const j = await apiFetch('/conferences', { headers: { 'Accept':'application/json' } });
+  return (j && j.data) || [];
+}
+async function createConference({ name, start_date, end_date, website_url, goals }){
+  const j = await apiFetch('/conferences', {
+    method:'POST',
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify({ name, start_date, end_date, website_url, goals })
+  });
+  return j.data;
+}
+async function getConference(id){
+  const j = await apiFetch(`/conferences/${id}`);
+  return j.data;
+}
 
-  <!-- API dialog -->
-  <dialog id="dlgApi">
-    <form method="dialog" class="stack" style="padding:12px">
-      <h3 class="section-title">API Settings</h3>
-      <div class="grid-2">
-        <div class="field"><label>Base URL</label><input id="apiBase" type="text" placeholder="https://…/api"/></div>
-        <div class="field"><label>API Key</label><input id="apiKey" type="text" placeholder="paste key"/></div>
-      </div>
-      <div class="field">
-        <label>Auth Mode</label>
-        <div class="row">
-          <label><input type="radio" name="authmode" value="xapikey" checked/> X-API-Key</label>
-          <label><input type="radio" name="authmode" value="bearer"/> Bearer</label>
-          <label><input type="radio" name="authmode" value="query"/> Query (?apiKey=…)</label>
-        </div>
-      </div>
-      <div class="field"><label>Query name (if Query mode)</label><input id="apiQueryName" type="text" value="apiKey"/></div>
-      <div class="row" style="justify-content:flex-end">
-        <button class="btn ghost" id="btnApiTest">Test</button>
-        <button class="btn" id="btnApiSave">Save</button>
-        <button class="btn secondary" value="cancel">Close</button>
-      </div>
-    </form>
-  </dialog>
+/* =========================== Vendors =========================== */
+async function listVendors(){
+  const j = await apiFetch('/vendors', { headers: { 'Accept':'application/json' } });
+  return (j && j.data) || [];
+}
+async function listVendorsForConference(conference_id){
+  const j = await apiFetch(`/conferences/${conference_id}/vendors`, { headers: { 'Accept':'application/json' } });
+  // API returns {count, data, success}; data is array
+  return (j && j.data) || [];
+}
+async function createVendor(payload){
+  const j = await apiFetch('/vendors', {
+    method:'POST',
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return j.data;
+}
+async function getVendorDetail(id){
+  const j = await apiFetch(`/vendors/${id}`, { headers: { 'Accept':'application/json' } });
+  return j.data;
+}
 
-  <!-- Logs dialog -->
-  <dialog id="dlgLogs">
-    <form method="dialog" class="stack" style="padding:12px">
-      <h3 class="section-title">Diagnostics & Logs</h3>
-      <div class="row">
-        <button class="btn ghost" id="btnLogCompact">Compact</button>
-        <button class="btn ghost" id="btnLogVerbose">Verbose</button>
-        <button class="btn ghost" id="btnLogCopy">Copy</button>
-      </div>
-      <div id="logsView" class="logs">Booting…</div>
-      <div class="row" style="justify-content:flex-end"><button class="btn secondary" value="cancel">Close</button></div>
-    </form>
-  </dialog>
+/* =========================== Sessions =========================== */
+// Step 1: JSON create (must use user_notes, NOT notes)
+async function createSessionJson({ vendor_id, conference_id, start_time, end_time, user_notes, local_transcription, gps_latitude, gps_longitude }){
+  const body = {
+    vendor_id, conference_id, start_time,
+    ...(end_time ? { end_time } : {}),
+    ...(local_transcription ? { local_transcription } : {}),
+    ...(typeof user_notes === 'string' ? { user_notes } : {}),
+    ...(typeof gps_latitude === 'number' ? { gps_latitude } : {}),
+    ...(typeof gps_longitude === 'number' ? { gps_longitude } : {}),
+  };
+  const j = await apiFetch('/sessions/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept':'application/json' },
+    body: JSON.stringify(body)
+  });
+  // API KB says data.id is returned
+  return j.data;
+}
 
-  <!-- Self-Test dialog -->
-  <dialog id="dlgSelfTest">
-    <form method="dialog" class="stack" style="padding:12px">
-      <h3 class="section-title">API Self-Test</h3>
-      <div class="hint">Runs GET /health & /conferences then a minimal JSON upload (no “notes”).</div>
-      <div class="row">
-        <button class="btn" id="btnRunTests">Run Tests</button>
-        <button class="btn secondary" value="cancel">Close</button>
-      </div>
-      <div id="testsView" class="logs">Idle.</div>
-    </form>
-  </dialog>
-
-  <!-- New Conf -->
-  <dialog id="dlgNewConf">
-    <form method="dialog" class="stack" style="padding:12px">
-      <h3 class="section-title">New Conference</h3>
-      <div class="field"><label>Name</label><input id="newConfName" type="text"/></div>
-      <div class="grid-2">
-        <div class="field"><label>Start</label><input id="newConfStart" type="date"/></div>
-        <div class="field"><label>End</label><input id="newConfEnd" type="date"/></div>
-      </div>
-      <div class="row" style="justify-content:flex-end">
-        <button class="btn" id="btnCreateConf">Create</button>
-        <button class="btn secondary" value="cancel">Close</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- New Vendor -->
-  <dialog id="dlgNewVendor">
-    <form method="dialog" class="stack" style="padding:12px">
-      <h3 class="section-title">New Vendor</h3>
-      <div class="field"><label>Name</label><input id="newVendorName" type="text"/></div>
-      <div class="field"><label>Conference</label><select id="newVendorConf"></select></div>
-      <div class="row" style="justify-content:flex-end">
-        <button class="btn" id="btnCreateVendor">Create</button>
-        <button class="btn secondary" value="cancel">Close</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- Minimal API shim (overridden if cb-api.js is present) -->
-  <script>
-  (function(){
-    if (window.CB) return;
-    const store = {
-      base: localStorage.getItem('cb.api.base') || '',
-      key:  localStorage.getItem('cb.api.key')  || '',
-      mode: localStorage.getItem('cb.api.mode') || 'xapikey',
-      qn:   localStorage.getItem('cb.api.qn')   || 'apiKey'
-    };
-    const redact = (k,v)=>{
-      if (/api[-_ ]?key|authorization/i.test(k)) return '***';
-      if (typeof v==='string' && v.length>256) return v.slice(0,256)+'…';
-      return v;
-    };
-    const log = (lvl,msg,extra)=>window.__CB_LOG && window.__CB_LOG(lvl,msg,extra);
-
-    function headersJson(){
-      const h={'Accept':'application/json'};
-      if (store.mode==='xapikey' && store.key) h['X-API-Key']=store.key;
-      if (store.mode==='bearer' && store.key)  h['Authorization']='Bearer '+store.key;
-      return h;
+// Step 2: add files via multipart
+async function addFilesToSession(sessionId, { audioBlob=null, imageFiles=[] /*, notes*/ }={}){
+  const fd = new FormData();
+  if(audioBlob && audioBlob.blob){
+    fd.append('audio_files', audioBlob.blob, audioBlob.name || 'audio.webm');
+  }
+  if(imageFiles && imageFiles.length){
+    for(const f of imageFiles){
+      fd.append('image_files', f, f.name);
     }
-    function withAuth(url){
-      if (store.mode!=='query' || !store.key) return url;
-      const u = new URL(url, location.href); u.searchParams.set(store.qn||'apiKey', store.key); return u.toString();
-    }
-    async function http(method,path,{jsonBody=null,rawBody=null,contentType}={}){
-      if (!store.base) throw new Error('API base URL not configured.');
-      const url = withAuth(store.base.replace(/\/+$/,'') + path);
-      const id = Math.random().toString(36).slice(2,9), start=performance.now();
-      const headers = headersJson(); if (contentType) headers['Content-Type']=contentType;
-      const init = {method,headers};
-      if (jsonBody!=null){ init.body = JSON.stringify(jsonBody); }
-      else if (rawBody!=null){ init.body = rawBody; }
+  }
+  // We intentionally DO NOT set Content-Type; browser sets multipart boundary.
+  const j = await apiFetch(`/sessions/${sessionId}/add-files`, {
+    method:'POST',
+    headers: { /* only API key is needed; do not set Content-Type */ },
+    body: fd
+  });
+  return j;
+}
 
-      log('info',`HTTP ${method} ${url}`,'→ request');
-      // Log request descriptor + JSON payload preview
-      const preview = jsonBody!=null ? JSON.stringify(jsonBody,(k,v)=>redact(k,v)) : (rawBody instanceof FormData ? '[FormData]' : (rawBody ? '[raw]' : ''));
-      log('info', JSON.stringify({id,method,url,reqHeaders:headers,body:preview}));
+/* =========================== Unknown entities =========================== */
+async function ensureUnknownEntities(confId, vendId){
+  // Returns {conference_id, vendor_id}
+  if(confId && vendId) return { conference_id: confId, vendor_id: vendId };
 
-      const res = await fetch(url, init);
-      const dur = Math.round(performance.now()-start);
-      const text = await res.text();
-      log('info',`HTTP ${method} ${url}`,`← ${res.status}  (${dur}ms)`);
-      log('info', JSON.stringify({id,dur:String(dur),status:res.status,resHeaders:Object.fromEntries(res.headers.entries()),body:text}));
-      if (!res.ok){ const err=new Error(`HTTP ${res.status} — ${text}`); err.status=res.status; throw err; }
-      try{return JSON.parse(text);}catch{return text;}
-    }
+  const today = ymd(new Date());
+  let conference_id = confId || null;
+  let vendor_id = vendId || null;
 
-    // Deep sanitize: convert any "notes" to "user_notes" (and remove "notes")
-    function sanitizeNotes(obj){
-      if (!obj || typeof obj!=='object') return obj;
-      if (Array.isArray(obj)){ return obj.map(sanitizeNotes); }
-      const out = {};
-      for (const [k,v] of Object.entries(obj)){
-        if (k==='notes'){ // rename
-          if (out.user_notes==null) out.user_notes = v;
-          continue; // drop original key
-        }
-        out[k]=sanitizeNotes(v);
-      }
-      return out;
-    }
-
-    window.CB = {
-      config:{
-        get:()=>({...store}),
-        set:(base,key,mode,qn)=>{ store.base=base; store.key=key; store.mode=mode; store.qn=qn||'apiKey';
-          localStorage.setItem('cb.api.base',store.base);
-          localStorage.setItem('cb.api.key',store.key);
-          localStorage.setItem('cb.api.mode',store.mode);
-          localStorage.setItem('cb.api.qn',store.qn);
-        }
-      },
-      listConfs:()=>http('GET','/conferences'),
-      listVendors:()=>http('GET','/vendors'),
-      listVendorsByConf:(id)=>http('GET',`/conferences/${id}/vendors`),
-      createConf:(p)=>http('POST','/conferences',{jsonBody:p,contentType:'application/json'}),
-      createVendor:(p)=>http('POST','/vendors',{jsonBody:p,contentType:'application/json'}),
-      vendorsGet:(id)=>http('GET',`/vendors/${id}`),
-      health:()=>http('GET','/health'),
-
-      // JSON-only upload (per backend guidance). We sanitize away any "notes".
-      uploadSessionJson:(payload)=>{
-        const clean = sanitizeNotes(payload);
-        return http('POST','/sessions/upload',{jsonBody:clean,contentType:'application/json'});
-      }
-    };
-  })();
-  </script>
-
-  <!-- App logic -->
-  <script>
-  (function(){
-    // ---- Logger ----
-    const logs=[]; const listeners={};
-    window.__CB_LOG=(level,msg,extra='')=>{
-      const entry={t:new Date().toISOString(),level,msg,extra};
-      logs.push(entry);
-      if (listeners.log) listeners.log(entry);
-    };
-    const log=(...a)=>window.__CB_LOG(...a);
-
-    // ---- DOM ----
-    const $=s=>document.querySelector(s);
-    const on=(el,ev,fn)=>el.addEventListener(ev,fn,{passive:false});
-    const el={
-      btnOpenApi:$('#btnOpenApi'),btnOpenLogs:$('#btnOpenLogs'),btnSelfTest:$('#btnSelfTest'),connBadge:$('#connBadge'),
-      selConference:$('#selConference'),selVendor:$('#selVendor'),btnNewConf:$('#btnNewConf'),btnNewVendor:$('#btnNewVendor'),
-      btnStart:$('#btnStart'),btnStop:$('#btnStop'),btnPrev:$('#btnPrev'),
-      badgeAudio:$('#badgeAudio'),badgeImages:$('#badgeImages'),badgeSession:$('#badgeSession'),
-      txtNotes:$('#txtNotes'),imgGrid:$('#imgGrid'),filePhotos:$('#filePhotos'),btnAddPhoto:$('#btnAddPhoto'),
-      selPrevConf:$('#selPrevConf'),selPrevVendor:$('#selPrevVendor'),btnLoadPrev:$('#btnLoadPrev'),prevList:$('#prevList'),
-      status:$('#status'),
-      dlgApi:$('#dlgApi'),apiBase:$('#apiBase'),apiKey:$('#apiKey'),btnApiSave:$('#btnApiSave'),btnApiTest:$('#btnApiTest'),
-      dlgLogs:$('#dlgLogs'),logsView:$('#logsView'),btnLogCompact:$('#btnLogCompact'),btnLogVerbose:$('#btnLogVerbose'),btnLogCopy:$('#btnLogCopy'),
-      dlgSelfTest:$('#dlgSelfTest'),btnRunTests:$('#btnRunTests'),
-      dlgNewConf:$('#dlgNewConf'),newConfName:$('#newConfName'),newConfStart:$('#newConfStart'),newConfEnd:$('#newConfEnd'),btnCreateConf:$('#btnCreateConf'),
-      dlgNewVendor:$('#dlgNewVendor'),newVendorName:$('#newVendorName'),newVendorConf:$('#newVendorConf'),btnCreateVendor:$('#btnCreateVendor'),
-      btnExportTxt:$('#btnExportTxt'),btnExportJson:$('#btnExportJson')
-    };
-
-    // ---- State ----
-    const state={media:null,recorder:null,chunks:[],images:[],sessionStart:null,confs:[],vendors:[]};
-
-    // ---- Helpers ----
-    const safe=(v)=>v==null?'':String(v);
-    const setBadge=(id,t)=>el[id].textContent=t;
-    const status=(t)=>el.status.textContent=t;
-    const bytes=(b)=>!b?'0 MB':(b/1024/1024).toFixed(2)+' MB';
-
-    function renderLogs(verbose=false){
-      el.logsView.textContent = logs.map(x=> verbose? JSON.stringify(x,null,2) : JSON.stringify(x)).join('\n') || '(empty)';
-    }
-    listeners.log=()=>renderLogs(false);
-    function download(name,text,mime='text/plain'){ const blob=new Blob([text],{type:mime}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),500); }
-
-    function applyConfigToBadges(){
-      const cfg=CB.config.get();
-      el.connBadge.textContent = cfg.base ? 'Connected' : 'Disconnected';
-      el.connBadge.classList.toggle('muted', !cfg.base);
-    }
-
-    async function loadInitial(){
+  if(!conference_id){
+    // Try to find an "Unknown Conference"
+    const all = await listConferences();
+    const found = all.find(c => /^unknown conference$/i.test(c.name));
+    if(found){ conference_id = found.id; }
+    else{
       try{
-        const cfg=CB.config.get(); if(!cfg.base){ status('API base not set. Open API.'); log('error','Could not load initial data: API base URL not configured.'); return; }
-        const confs=await CB.listConfs(); state.confs=Array.isArray(confs?.data)?confs.data:[];
-        const confOpts=['<option value="">(Any / Unknown)</option>'].concat(state.confs.map(c=>`<option value="${c.id}">${safe(c.name)}</option>`));
-        el.selConference.innerHTML=confOpts.join(''); el.selPrevConf.innerHTML=confOpts.join('');
-        const vendors=await CB.listVendors().catch(()=>({data:[]}));
-        state.vendors=Array.isArray(vendors?.data)?vendors.data:[];
-        const vOpts=['<option value="">(Any / Unknown)</option>'].concat(state.vendors.map(v=>`<option value="${v.id}">${safe(v.name)}</option>`));
-        el.selVendor.innerHTML=vOpts.join(''); el.selPrevVendor.innerHTML=vOpts.join('');
-        log('info','Dropdowns populated from API.');
-        status('Ready.');
-      }catch(err){ log('error','Could not load initial data: '+(err.message||err)); status('Failed to load initial data.'); }
-    }
-
-    async function ensureUnknownsIfNeeded(){
-      let confId=el.selConference.value||''; let vendorId=el.selVendor.value||'';
-      if (!confId){
-        const name='Unknown Conference'; const found=state.confs.find(c=>(c.name||'').toLowerCase()===name.toLowerCase());
-        if (found) confId=found.id; else {
-          const d=new Date().toISOString().slice(0,10);
-          const created=await CB.createConf({name,start_date:d,end_date:d}); confId=created?.data?.id||created?.id;
-        }
-      }
-      if (!vendorId){
-        const vname='Unknown Vendor';
-        let scoped=[]; try{ const res=await CB.listVendorsByConf(confId); scoped=Array.isArray(res?.data)?res.data:[]; }catch{}
-        const found=scoped.find(v=>(v.name||'').toLowerCase()===vname.toLowerCase());
-        if (found) vendorId=found.id; else {
-          const created=await CB.createVendor({name:vname,conference_id:confId}); vendorId=created?.data?.id||created?.id;
-        }
-      }
-      return {confId,vendorId};
-    }
-
-    function addThumb(file){
-      const idx=state.images.length; state.images.push(file);
-      const wrap=document.createElement('div'); wrap.className='thumb';
-      const img=document.createElement('img'); const r=new FileReader(); r.onload=e=>img.src=e.target.result; r.readAsDataURL(file);
-      const rm=document.createElement('button'); rm.className='btn ghost'; rm.textContent='×';
-      rm.onclick=e=>{ e.preventDefault(); state.images.splice(idx,1); wrap.remove(); setBadge('badgeImages',`Images: ${state.images.length}`); };
-      wrap.appendChild(img); wrap.appendChild(rm); el.imgGrid.appendChild(wrap);
-      setBadge('badgeImages',`Images: ${state.images.length}`);
-    }
-
-    async function startRecording(){
-      try{
-        if (state.recorder) return;
-        state.media=await navigator.mediaDevices.getUserMedia({audio:true});
-        state.chunks=[]; state.recorder=new MediaRecorder(state.media,{mimeType:'audio/webm'});
-        state.recorder.ondataavailable=e=>{ if (e.data && e.data.size>0) state.chunks.push(e.data); };
-        state.recorder.start(); state.sessionStart=new Date();
-        setBadge('badgeAudio','Audio: recording…'); log('info','Audio recording started.');
-      }catch(err){ log('error','Could not start audio: '+(err.message||err)); status('Microphone permission failed.'); }
-    }
-
-    function blobToB64(blob){ return new Promise((resolve,reject)=>{ const r=new FileReader(); r.onload=()=>resolve(String(r.result).split(',')[1]); r.onerror=reject; r.readAsDataURL(blob); }); }
-    const fileToB64 = (f)=>blobToB64(f);
-
-    async function stopAndUpload(){
-      try{
-        if (!state.recorder){ status('No active recording.'); return; }
-        log('info','Stopping recorder…');
-        await new Promise(res=>{ state.recorder.onstop=res; state.recorder.stop(); });
-        const blob=new Blob(state.chunks,{type:'audio/webm'});
-        setBadge('badgeAudio',`Audio: ${bytes(blob.size)}`); log('info',`Audio captured: ${bytes(blob.size)}`);
-
-        const {confId,vendorId}=await ensureUnknownsIfNeeded();
-        const startISO = state.sessionStart? state.sessionStart.toISOString() : new Date().toISOString();
-        const endISO   = new Date().toISOString();
-        const dur      = state.sessionStart? Math.max(1,Math.round((Date.now()-state.sessionStart.getTime())/1000)) : 1;
-
-        const payload = {
-          conference_id: confId,
-          vendor_id: vendorId,
-          start_time: startISO,
-          end_time: endISO,
-          duration_seconds: dur,
-          user_notes: el.txtNotes.value || '',
-          audio_base64: await blobToB64(blob),
-          images_base64: await Promise.all(state.images.map(fileToB64))
-        };
-
-        // JSON-only, sanitized at CB.uploadSessionJson level as well
-        await CB.uploadSessionJson(payload);
-        log('info','Upload (JSON) complete.');
-        status('Upload complete (JSON).');
-
-        // Reset
-        state.images=[]; el.imgGrid.innerHTML=''; setBadge('badgeImages','Images: 0');
-        state.recorder=null; state.media?.getTracks().forEach(t=>t.stop()); state.media=null; state.chunks=[];
-      }catch(err){
-        log('error','Upload failed: '+(err.message||err)); status('Upload failed.');
-        // cleanup recorder
-        state.recorder=null; state.media?.getTracks().forEach(t=>t.stop()); state.media=null; state.chunks=[];
+        const c = await createConference({ name: 'Unknown Conference', start_date: today, end_date: today });
+        conference_id = c.id;
+      }catch(e){
+        log('warn','Could not create Unknown Conference automatically; using first conference if available.');
+        if(all.length) conference_id = all[0].id;
+        else throw e;
       }
     }
+  }
 
-    async function runSelfTest(){
-      const out=[]; const p=s=>{ out.push(s); $('#testsView').textContent=out.join('\n'); };
-      try{
-        p('GET /health'); await CB.health(); p('✓ health');
-        p('GET /conferences'); const confs=await CB.listConfs(); p(`✓ conferences (${confs?.count ?? (confs?.data||[]).length})`);
-        const d=new Date().toISOString().slice(0,10);
-        let confId=(confs?.data||[]).find(c=>(c.name||'').toLowerCase()==='unknown conference')?.id;
-        if(!confId){ p('POST /conferences (Unknown Conference)'); confId=(await CB.createConf({name:'Unknown Conference',start_date:d,end_date:d}))?.data?.id; }
-        let vendors=await CB.listVendorsByConf(confId).catch(()=>({data:[]}));
-        let vendorId=(vendors?.data||[]).find(v=>(v.name||'').toLowerCase()==='unknown vendor')?.id;
-        if(!vendorId){ p('POST /vendors (Unknown Vendor)'); vendorId=(await CB.createVendor({name:'Unknown Vendor',conference_id:confId}))?.data?.id; }
-        p('POST /sessions/upload (JSON, user_notes)'); await CB.uploadSessionJson({
-          conference_id: confId, vendor_id: vendorId,
-          start_time: new Date().toISOString(), end_time: new Date(Date.now()+1000).toISOString(),
-          duration_seconds: 1, user_notes: 'Self-test', audio_base64: '', images_base64: []
-        });
-        p('✓ Upload JSON accepted (no "notes").'); p('DONE.');
-      }catch(err){ p('✖ Self-Test failed: '+(err.message||err)); }
+  if(!vendor_id){
+    // try to find Unknown Vendor for this conference
+    const vlist = await listVendorsForConference(conference_id);
+    const fv = vlist.find(v=>/^unknown vendor$/i.test(v.name));
+    if(fv){ vendor_id = fv.id; }
+    else{
+      const v = await createVendor({ name:'Unknown Vendor', conference_id });
+      vendor_id = v.id;
     }
+  }
 
-    // ---- Bindings ----
-    function bind(){
-      on(el.btnOpenApi,'click',e=>{e.preventDefault(); el.dlgApi.showModal();});
-      on(el.btnOpenLogs,'click',e=>{e.preventDefault(); el.dlgLogs.showModal(); renderLogs(false);});
-      on(el.btnSelfTest,'click',e=>{e.preventDefault(); el.dlgSelfTest.showModal();});
-      on(el.btnApiSave,'click',e=>{e.preventDefault();
-        const mode=[...document.querySelectorAll('input[name="authmode"]')].find(r=>r.checked)?.value||'xapikey';
-        CB.config.set(el.apiBase.value.trim(), el.apiKey.value.trim(), mode, $('#apiQueryName').value.trim()||'apiKey');
-        log('info','Config updated.'); applyConfigToBadges(); loadInitial();
-      });
-      on(el.btnApiTest,'click',async e=>{e.preventDefault(); try{await CB.health(); status('Health OK');}catch(err){status('Health failed: '+(err.message||err));}});
-      on(el.btnNewConf,'click',e=>{e.preventDefault(); const d=new Date().toISOString().slice(0,10); el.newConfStart.value=d; el.newConfEnd.value=d; el.dlgNewConf.showModal();});
-      on(el.btnCreateConf,'click',async e=>{e.preventDefault(); try{
-        const n=el.newConfName.value.trim(), s=el.newConfStart.value, ed=el.newConfEnd.value;
-        if(!n||!s||!ed){status('Name/start/end required.');return;}
-        const created=await CB.createConf({name:n,start_date:s,end_date:ed}); log('info','Conference created: '+JSON.stringify(created)); el.dlgNewConf.close(); loadInitial();
-      }catch(err){log('error','Create conference failed: '+(err.message||err));}});
-      on(el.btnNewVendor,'click',e=>{e.preventDefault();
-        el.newVendorConf.innerHTML=(state.confs||[]).map(c=>`<option value="${c.id}">${safe(c.name)}</option>`).join('');
-        el.dlgNewVendor.showModal();
-      });
-      on(el.btnCreateVendor,'click',async e=>{e.preventDefault(); try{
-        const n=el.newVendorName.value.trim(), cid=el.newVendorConf.value; if(!n||!cid){status('Vendor name & conference required.');return;}
-        const created=await CB.createVendor({name:n,conference_id:cid}); log('info','Vendor created: '+JSON.stringify(created)); el.dlgNewVendor.close(); loadInitial();
-      }catch(err){log('error','Create vendor failed: '+(err.message||err));}});
-      on(el.selConference,'change',async ()=>{
-        const id=el.selConference.value; if(!id){
-          const vOpts=['<option value="">(Any / Unknown)</option>'].concat((state.vendors||[]).map(v=>`<option value="${v.id}">${safe(v.name)}</option>`));
-          el.selVendor.innerHTML=vOpts.join(''); return;
-        }
-        try{ const res=await CB.listVendorsByConf(id); const vs=Array.isArray(res?.data)?res.data:[]; const vOpts=['<option value="">(Any / Unknown)</option>'].concat(vs.map(v=>`<option value="${v.id}">${safe(v.name)}</option>`)); el.selVendor.innerHTML=vOpts.join(''); }catch{}
-      });
-      on(el.btnAddPhoto,'click',e=>{e.preventDefault(); el.filePhotos.click();});
-      on(el.filePhotos,'change',e=>{ Array.from(e.target.files||[]).forEach(addThumb); e.target.value=''; });
-      on(el.btnStart,'click',async e=>{e.preventDefault(); await startRecording();});
-      on(el.btnStop,'click',async e=>{e.preventDefault(); await stopAndUpload();});
-      on(el.btnPrev,'click',e=>{e.preventDefault(); window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});});
-      on(el.btnLoadPrev,'click',async e=>{e.preventDefault();
-        el.prevList.innerHTML='<div class="hint">Loading…</div>';
-        try{
-          const vid=el.selPrevVendor.value; if(!vid){el.prevList.innerHTML='<div class="hint">Pick a vendor first.</div>'; return;}
-          const d=await CB.vendorsGet(vid); const sessions=Array.isArray(d?.data?.sessions)?d.data.sessions:[];
-          el.prevList.innerHTML=sessions.slice(0,20).map(s=>`
-            <div class="card">
-              <div><strong>${safe(s.session_type||'session')}</strong> — ${safe(s.status||'')}</div>
-              <div class="hint">${safe(s.start_time||'')} → ${safe(s.end_time||'')}</div>
-              <div class="hint">Duration: ${safe(s.duration_seconds||'')}</div>
-              <div class="field"><label>User notes</label><div class="logs">${safe(s.user_notes||'')}</div></div>
-              ${(Array.isArray(s.files_uploaded)&&s.files_uploaded.length)?`<div class="field"><label>Files</label><div class="stack">${s.files_uploaded.map(f=>`<a href="${f.url}" target="_blank">${safe(f.filename||'file')}</a>`).join('')}</div></div>`:''}
-              ${(Array.isArray(s.photo_urls)&&s.photo_urls.length)?`<div class="imgGrid">${s.photo_urls.slice(0,6).map(u=>`<div class="thumb"><img src="${u}"></div>`).join('')}</div>`:''}
-            </div>`).join('') || '<div class="hint">No sessions yet.</div>';
-        }catch(err){ el.prevList.innerHTML='<div class="hint">Failed to load: '+safe(err.message||err)+'</div>'; }
-      });
-      on(el.btnOpenLogs,'click',()=>renderLogs(false));
-      on(el.btnLogCompact,'click',e=>{e.preventDefault(); renderLogs(false);});
-      on(el.btnLogVerbose,'click',e=>{e.preventDefault(); renderLogs(true);});
-      on(el.btnLogCopy,'click',e=>{e.preventDefault(); navigator.clipboard.writeText(el.logsView.textContent||'');});
-      on(el.btnExportTxt,'click',e=>{e.preventDefault(); download('cb-logs.txt', logs.map(l=>JSON.stringify(l)).join('\n'));});
-      on(el.btnExportJson,'click',e=>{e.preventDefault(); download('cb-logs.json', JSON.stringify(logs,null,2),'application/json');});
-      on(el.btnRunTests,'click',async e=>{e.preventDefault(); await runSelfTest();});
-    }
+  return { conference_id, vendor_id };
+}
 
-    document.addEventListener('DOMContentLoaded',()=>{
-      bind();
-      // seed cfg UI
-      const cfg=CB.config.get(); el.apiBase.value=cfg.base; el.apiKey.value=cfg.key; applyConfigToBadges();
-      loadInitial();
-    });
-  })();
-  </script>
+/* =========================== Self Test =========================== */
+async function selfTest(){
+  // 1. health
+  await apiFetch('/health', { headers: { 'Accept':'application/json' } });
+  // 2. conferences list
+  await listConferences();
+  // 3. vendors list
+  await listVendors();
+  log('info','Self-test passed.');
+  return true;
+}
 
-  <!-- Optional: your real API module (if present it will override the shim above) -->
-  <script src="cb-api.js" defer></script>
-</body>
-</html>
+/* =========================== Exports =========================== */
+export {
+  setConfig, getConfig, assertConfig,
+  log, logsToJson, logsToText, clearLogs,
+  nowIso, ymd,
+  listConferences, createConference, getConference,
+  listVendors, listVendorsForConference, createVendor, getVendorDetail,
+  ensureUnknownEntities,
+  createSessionJson, addFilesToSession,
+  selfTest
+};
