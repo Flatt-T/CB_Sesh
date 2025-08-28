@@ -1,224 +1,500 @@
-// cb-api.js — All API I/O + structured logging
-// Uses the API KB guidance:
-// - POST /api/sessions/upload accepts JSON (user_notes) or multipart; we use JSON first
-// - Then POST /api/sessions/:id/add-files with multipart (audio_files[], image_files[], notes?) for actual files
-// - Vendors/Conferences endpoints require JSON and X-API-Key
-// Ref KB: Session upload & add-files details.
-
-/* =========================== Logger =========================== */
-const __logs = [];
-function _stamp(){ return new Date().toISOString(); }
-function log(level, msg, extra){
-  const entry = { t: _stamp(), level: (level||'info'), msg: String(msg), extra: extra ?? '' };
-  __logs.push(entry);
-  // console side too, for dev
-  const fn = (level==='error'?'error':(level==='warn'?'warn':'log'));
-  console[fn](`[${entry.t}] ${entry.level.toUpperCase()} ${entry.msg} ${entry.extra?'- '+entry.extra:''}`);
-}
-function logsToJson(){ return [...__logs]; }
-function logsToText(){
-  return __logs.map(l=>`${l.t} [${l.level.toUpperCase()}] ${l.msg}${l.extra?` ${l.extra}`:''}`).join('\n');
-}
-function clearLogs(){ __logs.length = 0; }
-
-/* =========================== Config =========================== */
-const LS_KEY = 'cb_cfg_v2';
-let CFG = { base:'', key:'' };
-function setConfig({ base, key }){
-  if(typeof base==='string') CFG.base = base.replace(/\/+$/,''); // drop trailing slash
-  if(typeof key==='string') CFG.key = key;
-  localStorage.setItem(LS_KEY, JSON.stringify(CFG));
-  log('info','Config updated.');
-}
-function getConfig(){
-  const s = localStorage.getItem(LS_KEY);
-  if(s){ try{ CFG = JSON.parse(s) || CFG; }catch{} }
-  return { ...CFG };
-}
-function assertConfig(){
-  const c = getConfig();
-  if(!c.base){ throw new Error('API base URL not configured.'); }
-  if(!c.key){ throw new Error('API key not configured.'); }
-  return c;
-}
-
-/* =========================== Helpers =========================== */
-const nowIso = ()=> new Date().toISOString();
-const ymd = (d)=> {
-  const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
-};
-
-async function apiFetch(path, { method='GET', headers={}, body=null, raw=false }={}){
-  const { base, key } = assertConfig();
-  const url = `${base}${path.startsWith('/')?'': '/'}${path}`;
-  const reqId = Math.random().toString(36).slice(2,9);
-
-  const hdrs = new Headers(headers || {});
-  if(!hdrs.has('X-API-Key')) hdrs.set('X-API-Key', key);
-
-  log('info',`HTTP ${method} ${url}`, '→ request');
-  log('info', JSON.stringify({ id:reqId, method, url, reqHeaders:Object.fromEntries(hdrs.entries()) }));
-
-  const res = await fetch(url, { method, headers: hdrs, body });
-  const text = await res.text();
-  log('info',`HTTP ${method} ${url}`, `← ${res.status} ${res.statusText} (${res.headers.get('content-length')||''?'' : ''})`);
-  let data = null;
-  try{ data = text ? JSON.parse(text) : null; }catch{ data = text; }
-  log('info', JSON.stringify({
-    id:reqId, dur: undefined, status: res.status,
-    resHeaders: Object.fromEntries(res.headers.entries()), body: typeof data==='string'?data:JSON.stringify(data)+"\n"
-  }));
-
-  if(!res.ok){
-    const err = new Error(`HTTP ${res.status} ${res.statusText} — ${typeof data==='string'?data:JSON.stringify(data)}`);
-    log('error',`HTTP ${method} ${url}`, `✖ ${err.message}`);
-    throw err;
-  }
-  return data;
-}
-
-/* =========================== Conferences =========================== */
-async function listConferences(){
-  const j = await apiFetch('/conferences', { headers: { 'Accept':'application/json' } });
-  return (j && j.data) || [];
-}
-async function createConference({ name, start_date, end_date, website_url, goals }){
-  const j = await apiFetch('/conferences', {
-    method:'POST',
-    headers: { 'Content-Type':'application/json' },
-    body: JSON.stringify({ name, start_date, end_date, website_url, goals })
-  });
-  return j.data;
-}
-async function getConference(id){
-  const j = await apiFetch(`/conferences/${id}`);
-  return j.data;
-}
-
-/* =========================== Vendors =========================== */
-async function listVendors(){
-  const j = await apiFetch('/vendors', { headers: { 'Accept':'application/json' } });
-  return (j && j.data) || [];
-}
-async function listVendorsForConference(conference_id){
-  const j = await apiFetch(`/conferences/${conference_id}/vendors`, { headers: { 'Accept':'application/json' } });
-  // API returns {count, data, success}; data is array
-  return (j && j.data) || [];
-}
-async function createVendor(payload){
-  const j = await apiFetch('/vendors', {
-    method:'POST',
-    headers: { 'Content-Type':'application/json' },
-    body: JSON.stringify(payload)
-  });
-  return j.data;
-}
-async function getVendorDetail(id){
-  const j = await apiFetch(`/vendors/${id}`, { headers: { 'Accept':'application/json' } });
-  return j.data;
-}
-
-/* =========================== Sessions =========================== */
-// Step 1: JSON create (must use user_notes, NOT notes)
-async function createSessionJson({ vendor_id, conference_id, start_time, end_time, user_notes, local_transcription, gps_latitude, gps_longitude }){
-  const body = {
-    vendor_id, conference_id, start_time,
-    ...(end_time ? { end_time } : {}),
-    ...(local_transcription ? { local_transcription } : {}),
-    ...(typeof user_notes === 'string' ? { user_notes } : {}),
-    ...(typeof gps_latitude === 'number' ? { gps_latitude } : {}),
-    ...(typeof gps_longitude === 'number' ? { gps_longitude } : {}),
-  };
-  const j = await apiFetch('/sessions/upload', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept':'application/json' },
-    body: JSON.stringify(body)
-  });
-  // API KB says data.id is returned
-  return j.data;
-}
-
-// Step 2: add files via multipart
-async function addFilesToSession(sessionId, { audioBlob=null, imageFiles=[] /*, notes*/ }={}){
-  const fd = new FormData();
-  if(audioBlob && audioBlob.blob){
-    fd.append('audio_files', audioBlob.blob, audioBlob.name || 'audio.webm');
-  }
-  if(imageFiles && imageFiles.length){
-    for(const f of imageFiles){
-      fd.append('image_files', f, f.name);
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"
+  />
+  <title>Conference Buddy — Session Recorder</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --bg2:#0f1a30;
+      --panel:#14203a;
+      --accent:#3b82f6;
+      --accent2:#60a5fa;
+      --text:#e6f0ff;
+      --muted:#9fb3d1;
+      --danger:#ef4444;
+      --ok:#10b981;
+      --warn:#f59e0b;
+      --card-radius:16px;
     }
-  }
-  // We intentionally DO NOT set Content-Type; browser sets multipart boundary.
-  const j = await apiFetch(`/sessions/${sessionId}/add-files`, {
-    method:'POST',
-    headers: { /* only API key is needed; do not set Content-Type */ },
-    body: fd
-  });
-  return j;
-}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial; }
+    button,input,select,textarea{font:inherit;}
+    a{color:var(--accent2);text-decoration:none}
+    .toolbar{
+      position:sticky; top:0; z-index:10; backdrop-filter: blur(6px);
+      background: linear-gradient(180deg, rgba(15,26,48,.9), rgba(15,26,48,.75));
+      padding:10px 8px; border-bottom:1px solid rgba(96,165,250,.15);
+      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    }
+    .row{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+    .grow{flex:1 1 160px}
+    .btn{
+      background:var(--accent); color:white; border:0; padding:10px 14px; border-radius:12px;
+      font-weight:600; box-shadow:0 4px 14px rgba(59,130,246,.25); cursor:pointer;
+    }
+    .btn.secondary{ background:#223052; color:#cfe0ff; box-shadow:none; border:1px solid rgba(96,165,250,.25) }
+    .btn.ghost{ background:transparent; border:1px solid rgba(148,163,184,.25); color:#cfe0ff }
+    .btn.warn{ background:var(--warn); color:#0b1220 }
+    .btn.ok{ background:var(--ok) }
+    .btn.danger{ background:var(--danger) }
+    .input, .select, .textarea{
+      background:var(--bg2); color:var(--text); border:1px solid rgba(96,165,250,.2);
+      padding:10px 12px; border-radius:12px; outline:none; width:100%;
+    }
+    .card{
+      background:var(--panel); border:1px solid rgba(96,165,250,.15);
+      border-radius:var(--card-radius); padding:12px; margin:10px 8px;
+    }
+    .grid{ display:grid; grid-template-columns: 1fr; gap:10px }
+    @media (min-width:520px){
+      .grid-2{ grid-template-columns: 1fr 1fr; }
+    }
+    .section-title{ font-weight:700; font-size:18px; margin:0 0 6px 0; }
+    .muted{ color: var(--muted); font-size:13px }
+    .pill{ display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:6px 10px; font-weight:600; }
+    .pill.info{ background:#1f2a44; color:#a5b4fc }
+    .pill.ok{ background:#10281f; color:#34d399 }
+    .pill.warn{ background:#292312; color:#fbbf24 }
+    .pill.bad{ background:#2a1414; color:#fca5a5 }
+    .media-preview{ display:flex; gap:10px; overflow:auto; padding:4px 0 }
+    .media-preview img{ height:72px; width:auto; border-radius:10px; border:1px solid rgba(255,255,255,.12); object-fit:cover }
+    .stack{ display:flex; flex-direction:column; gap:8px }
+    .flex{ display:flex; gap:8px; align-items:center }
+    .flex-col{ display:flex; flex-direction:column; gap:8px }
+    .divider{ height:1px; background:rgba(96,165,250,.15); margin:8px 0 }
+    .logs-wrap{ max-height:45vh; overflow:auto; background:#0c1426; border-radius:12px; padding:8px; border:1px solid rgba(96,165,250,.15) }
+    .k{ color:#93c5fd }
+    .v{ color:#a7f3d0 }
+    .err{ color:#fecaca }
+    .sticky-footer{ position:sticky; bottom:0; background:linear-gradient(0deg, rgba(15,26,48,.9), rgba(15,26,48,.4)); padding:8px; border-top:1px solid rgba(96,165,250,.12); }
+    details summary{ cursor:pointer }
+    .small{ font-size:12px }
+    .inline{ display:inline-flex; gap:6px; align-items:center }
+  </style>
+</head>
+<body>
+  <!-- Top toolbar -->
+  <div class="toolbar">
+    <div class="row grow">
+      <input id="apiBase" class="input grow" placeholder="API Base (e.g. https://.../api)" />
+      <input id="apiKey" class="input grow" placeholder="API Key" />
+      <button id="saveCfg" class="btn">Save</button>
+    </div>
+    <div class="row">
+      <button id="btnSelfTest" class="btn secondary">Self-Test</button>
+      <button id="btnLogs" class="btn ghost">Logs</button>
+      <button id="btnClear" class="btn ghost">Clear</button>
+    </div>
+  </div>
 
-/* =========================== Unknown entities =========================== */
-async function ensureUnknownEntities(confId, vendId){
-  // Returns {conference_id, vendor_id}
-  if(confId && vendId) return { conference_id: confId, vendor_id: vendId };
+  <!-- Session Recorder (mobile first) -->
+  <div class="card">
+    <div class="section-title">Session Recorder</div>
+    <div class="muted">Start/stop recording. You can record without selecting a conference/vendor — we’ll create “Unknown” entries automatically.</div>
+    <div class="grid grid-2" style="margin-top:8px">
+      <div class="stack">
+        <label class="small">Conference</label>
+        <select id="selConference" class="select"></select>
+        <div class="flex">
+          <input id="newConfName" class="input" placeholder="New conference name" />
+          <button id="btnAddConf" class="btn secondary">Add</button>
+        </div>
+      </div>
+      <div class="stack">
+        <label class="small">Vendor</label>
+        <select id="selVendor" class="select"></select>
+        <div class="flex">
+          <input id="newVendorName" class="input" placeholder="New vendor name" />
+          <button id="btnAddVendor" class="btn secondary">Add</button>
+        </div>
+      </div>
+    </div>
 
-  const today = ymd(new Date());
-  let conference_id = confId || null;
-  let vendor_id = vendId || null;
+    <div class="grid grid-2">
+      <div class="stack">
+        <label class="small">Notes</label>
+        <textarea id="txtNotes" class="textarea" rows="6" placeholder="Quick notes..."></textarea>
+      </div>
+      <div class="stack">
+        <label class="small">Photos</label>
+        <input id="inpPhotos" class="input" type="file" accept="image/*" multiple />
+        <div id="photoPreview" class="media-preview"></div>
+      </div>
+    </div>
 
-  if(!conference_id){
-    // Try to find an "Unknown Conference"
-    const all = await listConferences();
-    const found = all.find(c => /^unknown conference$/i.test(c.name));
-    if(found){ conference_id = found.id; }
-    else{
+    <div class="divider"></div>
+
+    <div class="flex">
+      <button id="btnStart" class="btn ok">Start</button>
+      <button id="btnStop" class="btn warn" disabled>Stop</button>
+      <span id="recStatus" class="pill info">idle</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="flex">
+      <button id="btnLoadSessions" class="btn secondary">View Previous Sessions</button>
+      <span class="muted small">Shows sessions for selected vendor, or all vendors in selected conference</span>
+    </div>
+
+    <div id="sessionsList" class="stack" style="margin-top:8px"></div>
+  </div>
+
+  <!-- Diagnostics -->
+  <div class="card">
+    <div class="section-title">Diagnostics &amp; Logs</div>
+    <div class="flex" style="flex-wrap:wrap; gap:6px">
+      <button id="btnCopyTxt" class="btn ghost">Copy .txt</button>
+      <button id="btnCopyJson" class="btn ghost">Copy .json</button>
+      <button id="btnDownloadTxt" class="btn ghost">Download .txt</button>
+      <button id="btnDownloadJson" class="btn ghost">Download .json</button>
+    </div>
+    <div class="divider"></div>
+    <pre id="logs" class="logs-wrap"></pre>
+  </div>
+
+  <div class="sticky-footer muted small">
+    <span class="inline">
+      <span>Status:</span>
+      <span id="footStatus">Ready.</span>
+    </span>
+  </div>
+
+  <!-- API Module -->
+  <script type="module" src="cb-api.js"></script>
+
+  <!-- UI wiring -->
+  <script type="module">
+    import {
+      setConfig, getConfig, selfTest,
+      listConferences, listVendors, listVendorsForConference,
+      createConference, createVendor, ensureUnknownEntities,
+      createSessionJson, addFilesToSession, getVendorDetail,
+      log, logsToText, logsToJson, clearLogs, nowIso, ymd, assertConfig
+    } from './cb-api.js';
+
+    // ------------- DOM helpers -------------
+    const $ = (id)=>document.getElementById(id);
+    const ui = {
+      apiBase: $('apiBase'),
+      apiKey: $('apiKey'),
+      saveCfg: $('saveCfg'),
+      btnSelfTest: $('btnSelfTest'),
+      btnLogs: $('btnLogs'),
+      btnClear: $('btnClear'),
+      selConference: $('selConference'),
+      selVendor: $('selVendor'),
+      newConfName: $('newConfName'),
+      btnAddConf: $('btnAddConf'),
+      newVendorName: $('newVendorName'),
+      btnAddVendor: $('btnAddVendor'),
+      txtNotes: $('txtNotes'),
+      inpPhotos: $('inpPhotos'),
+      photoPreview: $('photoPreview'),
+      btnStart: $('btnStart'),
+      btnStop: $('btnStop'),
+      recStatus: $('recStatus'),
+      btnLoadSessions: $('btnLoadSessions'),
+      sessionsList: $('sessionsList'),
+      logs: $('logs'),
+      btnCopyTxt: $('btnCopyTxt'),
+      btnCopyJson: $('btnCopyJson'),
+      btnDownloadTxt: $('btnDownloadTxt'),
+      btnDownloadJson: $('btnDownloadJson'),
+      footStatus: $('footStatus'),
+    };
+
+    // ------------- Logger sink -------------
+    function renderLogs(){
+      const lines = logsToJson().map(j => JSON.stringify(j));
+      ui.logs.textContent = lines.join('\n');
+      ui.logs.scrollTop = ui.logs.scrollHeight;
+    }
+    const logAndRender = (...args)=>{ log(...args); renderLogs(); };
+
+    // ------------- Config load -------------
+    function loadConfigToUI(){
+      const cfg = getConfig();
+      ui.apiBase.value = cfg.base || '';
+      ui.apiKey.value = cfg.key || '';
+    }
+    loadConfigToUI();
+
+    // ------------- State -------------
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let startTime = null;
+
+    // ------------- Populate dropdowns -------------
+    async function populate(){
       try{
-        const c = await createConference({ name: 'Unknown Conference', start_date: today, end_date: today });
-        conference_id = c.id;
+        assertConfig();
       }catch(e){
-        log('warn','Could not create Unknown Conference automatically; using first conference if available.');
-        if(all.length) conference_id = all[0].id;
-        else throw e;
+        logAndRender('error','Could not load initial data: API base URL not configured.');
+        return;
       }
+      const [cons, vends] = await Promise.all([
+        listConferences(),
+        listVendors()
+      ]);
+      // Conferences
+      ui.selConference.innerHTML = '<option value="">(None)</option>' +
+        cons.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+      // Vendors
+      ui.selVendor.innerHTML = '<option value="">(None)</option>' +
+        vends.map(v=>`<option value="${v.id}">${v.name}</option>`).join('');
+      logAndRender('info','Dropdowns populated from API.');
     }
-  }
 
-  if(!vendor_id){
-    // try to find Unknown Vendor for this conference
-    const vlist = await listVendorsForConference(conference_id);
-    const fv = vlist.find(v=>/^unknown vendor$/i.test(v.name));
-    if(fv){ vendor_id = fv.id; }
-    else{
-      const v = await createVendor({ name:'Unknown Vendor', conference_id });
-      vendor_id = v.id;
+    // ------------- Event wiring -------------
+    ui.saveCfg.addEventListener('click', async ()=>{
+      setConfig({ base: ui.apiBase.value.trim(), key: ui.apiKey.value.trim() });
+      logAndRender('info','Config updated.');
+      await populate();
+    });
+
+    ui.btnSelfTest.addEventListener('click', async ()=>{
+      try{
+        const res = await selfTest();
+        ui.footStatus.textContent = 'Self-test complete';
+        renderLogs();
+        alert('Self-test complete. Check logs for details.');
+      }catch(e){
+        ui.footStatus.textContent = 'Self-test error';
+        renderLogs();
+        alert('Self-test error. See logs.');
+      }
+    });
+
+    ui.btnLogs.addEventListener('click', ()=> renderLogs());
+    ui.btnClear.addEventListener('click', ()=> { clearLogs(); renderLogs(); });
+
+    ui.selConference.addEventListener('change', async ()=>{
+      const confId = ui.selConference.value || null;
+      if(confId){
+        const v = await listVendorsForConference(confId);
+        ui.selVendor.innerHTML = '<option value="">(None)</option>' +
+          v.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+      }else{
+        const v = await listVendors();
+        ui.selVendor.innerHTML = '<option value="">(None)</option>' +
+          v.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+      }
+    });
+
+    ui.btnAddConf.addEventListener('click', async ()=>{
+      try{
+        const name = ui.newConfName.value.trim();
+        if(!name){ alert('Enter a name'); return; }
+        const today = ymd(new Date());
+        const c = await createConference({ name, start_date: today, end_date: today });
+        await populate();
+        ui.selConference.value = c.id;
+        ui.newConfName.value='';
+      }catch(e){ renderLogs(); alert('Failed creating conference.'); }
+    });
+
+    ui.btnAddVendor.addEventListener('click', async ()=>{
+      try{
+        const name = ui.newVendorName.value.trim();
+        if(!name){ alert('Enter a name'); return; }
+        const confId = ui.selConference.value;
+        if(!confId){ alert('Select a conference first'); return; }
+        const v = await createVendor({ name, conference_id: confId });
+        await populate();
+        ui.selVendor.value = v.id;
+        ui.newVendorName.value='';
+      }catch(e){ renderLogs(); alert('Failed creating vendor.'); }
+    });
+
+    ui.inpPhotos.addEventListener('change', ()=>{
+      ui.photoPreview.innerHTML = '';
+      [...ui.inpPhotos.files].forEach(f=>{
+        const url = URL.createObjectURL(f);
+        const img = new Image();
+        img.src = url;
+        ui.photoPreview.appendChild(img);
+      });
+    });
+
+    ui.btnStart.addEventListener('click', async ()=>{
+      try{
+        await assertConfig();
+      }catch(e){
+        logAndRender('error','API not configured.');
+        alert('Configure API first.');
+        return;
+      }
+      if(mediaRecorder){ return; }
+      audioChunks = [];
+      startTime = new Date();
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorder.ondataavailable = e => { if(e.data && e.data.size) audioChunks.push(e.data); };
+      mediaRecorder.start();
+      ui.btnStart.disabled = true;
+      ui.btnStop.disabled = false;
+      ui.recStatus.textContent = 'recording…';
+      ui.recStatus.className = 'pill warn';
+      logAndRender('info','Audio recording started.');
+      logAndRender('info','Session started. Recording in progress.');
+    });
+
+    ui.btnStop.addEventListener('click', async ()=>{
+      if(!mediaRecorder){ return; }
+      ui.btnStop.disabled = true;
+      logAndRender('info','Stopping recorder…');
+      const stopP = new Promise(res=>{
+        mediaRecorder.onstop = res;
+      });
+      mediaRecorder.stop();
+      await stopP;
+      const blob = new Blob(audioChunks, { type:'audio/webm' });
+      const mb = (blob.size/1024/1024).toFixed(2);
+      logAndRender('info',`Audio captured: ${mb} MB`);
+      mediaRecorder.stream.getTracks().forEach(t=>t.stop());
+      mediaRecorder = null;
+      ui.btnStart.disabled = false;
+      ui.recStatus.textContent = 'idle';
+      ui.recStatus.className = 'pill info';
+
+      // Resolve/ensure entities
+      try{
+        const confIdSel = ui.selConference.value || null;
+        const vendIdSel = ui.selVendor.value || null;
+        const ensured = await ensureUnknownEntities(confIdSel, vendIdSel);
+        const conference_id = ensured.conference_id;
+        const vendor_id = ensured.vendor_id;
+
+        // Step 1 — create session via JSON (user_notes, NOT notes)
+        const start_iso = startTime ? startTime.toISOString() : nowIso();
+        const end_iso = new Date().toISOString();
+        const session = await createSessionJson({
+          vendor_id, conference_id,
+          start_time: start_iso,
+          end_time: end_iso,
+          user_notes: ui.txtNotes.value || ''
+        });
+
+        // Step 2 — add files via multipart if we have any
+        const hasAudio = blob.size > 0;
+        const files = [...ui.inpPhotos.files];
+        if(hasAudio || files.length){
+          await addFilesToSession(session.id, {
+            audioBlob: hasAudio ? { blob, name: 'session_audio.webm' } : null,
+            imageFiles: files,
+            // 'notes' is allowed here, but we already sent user_notes above. Keep it simple.
+          });
+        }
+
+        ui.footStatus.textContent = 'Upload complete';
+        alert('Session uploaded.');
+      }catch(e){
+        renderLogs();
+        alert('Upload failed. See logs.');
+      }
+    });
+
+    ui.btnLoadSessions.addEventListener('click', async ()=>{
+      ui.sessionsList.innerHTML = '';
+      try{
+        const confId = ui.selConference.value || null;
+        const vendId = ui.selVendor.value || null;
+
+        // If a vendor is selected, show that vendor’s sessions
+        if(vendId){
+          const vd = await getVendorDetail(vendId);
+          renderVendorSessions(vd);
+          return;
+        }
+        // otherwise, list all vendors for selected conference (or first)
+        let conferenceId = confId;
+        if(!conferenceId){
+          const cons = await listConferences();
+          if(!cons.length){ ui.sessionsList.innerHTML = '<div class="muted">No conferences.</div>'; return; }
+          conferenceId = cons[0].id;
+        }
+        const vendors = await listVendorsForConference(conferenceId);
+        for(const v of vendors){
+          const vd = await getVendorDetail(v.id);
+          renderVendorSessions(vd);
+        }
+      }catch(e){
+        renderLogs();
+        alert('Could not load sessions. See logs.');
+      }
+    });
+
+    function renderVendorSessions(vendorDetail){
+      const v = vendorDetail;
+      const wrap = document.createElement('div');
+      wrap.className='card';
+      wrap.innerHTML = `
+        <div class="section-title">${v.name}</div>
+        <div class="muted small">${v.website ? v.website : ''}</div>
+        <div class="divider"></div>
+        <div class="stack" id="sess-${v.id}"></div>
+      `;
+      ui.sessionsList.appendChild(wrap);
+      const target = wrap.querySelector(`#sess-${v.id}`);
+      if(!v.sessions || !v.sessions.length){
+        target.innerHTML = `<div class="muted">No sessions.</div>`;
+        return;
+      }
+      v.sessions.forEach(s=>{
+        const row = document.createElement('div');
+        row.className='stack';
+        row.style.border='1px solid rgba(96,165,250,.15)';
+        row.style.borderRadius='12px';
+        row.style.padding='8px';
+        row.innerHTML = `
+          <div class="flex" style="justify-content:space-between">
+            <div><b>${new Date(s.start_time).toLocaleString()}</b></div>
+            <div class="pill ${s.status==='failed'?'bad':(s.status==='enriched'?'ok':'info')}">${s.status}</div>
+          </div>
+          <div class="small muted">Duration: ${s.duration_seconds ?? '—'}s | Rating: ${s.user_rating ?? '—'}</div>
+          ${s.audio_file_url ? `<audio controls src="${s.audio_file_url}" style="width:100%"></audio>` : ''}
+          ${(s.photo_urls && s.photo_urls.length) ? `<div class="media-preview">${
+            s.photo_urls.map(u=>`<img src="${u}" alt="photo">`).join('')
+          }</div>` : ''}
+          ${s.user_notes ? `<details><summary>Notes</summary><div class="small">${(Array.isArray(s.user_notes)? s.user_notes.join('<br>') : s.user_notes)}</div></details>`:''}
+        `;
+        target.appendChild(row);
+      });
     }
-  }
 
-  return { conference_id, vendor_id };
-}
+    // Logs actions
+    ui.btnCopyTxt.addEventListener('click', async ()=>{
+      await navigator.clipboard.writeText(logsToText());
+      alert('Logs copied as text.');
+    });
+    ui.btnCopyJson.addEventListener('click', async ()=>{
+      await navigator.clipboard.writeText(JSON.stringify(logsToJson(),null,2));
+      alert('Logs copied as JSON.');
+    });
+    ui.btnDownloadTxt.addEventListener('click', ()=>{
+      const blob = new Blob([logsToText()], {type:'text/plain'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'cb_logs.txt'; a.click(); URL.revokeObjectURL(url);
+    });
+    ui.btnDownloadJson.addEventListener('click', ()=>{
+      const blob = new Blob([JSON.stringify(logsToJson(),null,2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'cb_logs.json'; a.click(); URL.revokeObjectURL(url);
+    });
 
-/* =========================== Self Test =========================== */
-async function selfTest(){
-  // 1. health
-  await apiFetch('/health', { headers: { 'Accept':'application/json' } });
-  // 2. conferences list
-  await listConferences();
-  // 3. vendors list
-  await listVendors();
-  log('info','Self-test passed.');
-  return true;
-}
-
-/* =========================== Exports =========================== */
-export {
-  setConfig, getConfig, assertConfig,
-  log, logsToJson, logsToText, clearLogs,
-  nowIso, ymd,
-  listConferences, createConference, getConference,
-  listVendors, listVendorsForConference, createVendor, getVendorDetail,
-  ensureUnknownEntities,
-  createSessionJson, addFilesToSession,
-  selfTest
-};
+    // Initial load
+    (async ()=>{
+      renderLogs();
+      await populate();
+    })();
+  </script>
+</body>
+</html>
