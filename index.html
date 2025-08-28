@@ -4,627 +4,618 @@
   <meta charset="utf-8" />
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
   />
   <title>conferenceBuddy — Session Recorder</title>
   <style>
     :root{
-      --bg:#0b132b;        /* dark blue */
-      --panel:#1c2541;     /* mid blue */
-      --accent:#3a506b;    /* slate blue */
-      --ink:#e6f1ff;       /* white-ish text */
-      --muted:#9fb3c8;
-      --ok:#22c55e; --warn:#f59e0b; --err:#ef4444;
-      --btn:#1f6feb;
+      --bg:#0b1530;        /* dark blue background */
+      --bg2:#0d1a3f;
+      --card:#121f48;
+      --text:#ffffff;
+      --muted:#9fb4ff;
+      --accent:#3b82f6;
+      --accent-2:#2563eb;
+      --danger:#ef4444;
+      --ok:#22c55e;
+      --border:rgba(255,255,255,0.14);
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
-      background:var(--bg); color:var(--ink);
-    }
-    .topbar{
-      position:sticky; top:0; z-index:10;
-      display:flex; gap:.5rem; align-items:center; padding:.5rem;
-      background:linear-gradient(180deg,var(--bg),rgba(11,19,43,.9));
-      border-bottom:1px solid rgba(255,255,255,.08);
-    }
-    .topbar input[type="text"]{
-      width:100%; max-width:420px; background:var(--panel); color:var(--ink);
-      border:1px solid rgba(255,255,255,.12); border-radius:.5rem; padding:.6rem .7rem;
-    }
-    .topbar input[type="password"]{ width:220px }
-    .btn{
-      background:var(--btn); color:#fff; border:none; border-radius:.55rem;
-      padding:.6rem .8rem; font-weight:600; cursor:pointer;
-    }
-    .btn.secondary{ background:var(--accent) }
-    .btn.ghost{
-      background:transparent; border:1px solid rgba(255,255,255,.18);
-    }
-    .btn:disabled{ opacity:.5; cursor:not-allowed }
-    .wrap{ display:flex; flex-direction:column; gap:.8rem; padding:.8rem }
-    .card{
-      background:var(--panel); border:1px solid rgba(255,255,255,.08);
-      border-radius:1rem; padding:.9rem;
-    }
-    .row{ display:flex; gap:.7rem; flex-wrap:wrap; align-items:center }
-    label{ font-size:.85rem; color:var(--muted) }
-    select, textarea{
-      width:100%; background:#0f1832; color:var(--ink);
-      border:1px solid rgba(255,255,255,.12); border-radius:.6rem; padding:.6rem;
-    }
-    textarea{ min-height:120px }
-    .grid{
-      display:grid; gap:.7rem;
-      grid-template-columns:1fr;
-    }
-    @media (min-width:700px){
-      .grid{ grid-template-columns:1fr 1fr }
-    }
-    .previewImgs{ display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.4rem }
-    .previewImgs img{ width:78px; height:78px; object-fit:cover; border-radius:.5rem; border:1px solid rgba(255,255,255,.12) }
-    .logbar{ display:flex; gap:.4rem; align-items:center; flex-wrap:wrap }
-    .logs{
-      height:220px; overflow:auto; background:#0a1026; border-radius:.6rem; padding:.6rem;
-      border:1px solid rgba(255,255,255,.08); font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.85rem;
-      color:#d9e6ff; white-space:pre-wrap;
-    }
-    .pill{ padding:.2rem .5rem; border-radius:999px; font-size:.74rem; border:1px solid rgba(255,255,255,.14); color:var(--muted)}
-    .success{ color:var(--ok) } .warning{ color:var(--warn)} .error{ color:var(--err)}
-    .sectionTitle{ font-weight:700; margin:0 0 .4rem 0 }
-    .note{ color:var(--muted); font-size:.86rem }
-    .list{
-      display:flex; flex-direction:column; gap:.5rem; max-height:360px; overflow:auto;
-      background:#0f1832; border:1px solid rgba(255,255,255,.08); border-radius:.6rem; padding:.5rem;
-    }
-    .item{
-      border:1px solid rgba(255,255,255,.1); border-radius:.6rem; padding:.6rem; background:#111a36;
-    }
-    .muted{ color:var(--muted) }
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+    button,input,select,textarea{font:inherit;color:inherit}
+    a{color:var(--muted)}
+    .bar{position:sticky;top:0;z-index:50;background:linear-gradient(180deg,var(--bg2),var(--bg));border-bottom:1px solid var(--border)}
+    .wrap{max-width:960px;margin:0 auto;padding:12px}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .row>*{flex:0 0 auto}
+    .input{background:var(--card);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:10px}
+    .input.wide{min-width:220px}
+    .btn{background:var(--accent);border:1px solid #1d4ed8;padding:10px 14px;border-radius:12px;color:#fff;cursor:pointer}
+    .btn.secondary{background:#0f172a;border-color:var(--border)}
+    .btn.ghost{background:transparent;border:1px solid var(--border)}
+    .btn.danger{background:var(--danger);border-color:#b91c1c}
+    .btn.ok{background:var(--ok);border-color:#16a34a}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .grid{display:grid;gap:12px}
+    @media (min-width:700px){.grid.two{grid-template-columns:1fr 1fr}}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px}
+    .title{font-weight:600;margin:0 0 6px 0}
+    .muted{color:var(--muted);font-size:12px}
+    .pill{padding:3px 8px;border-radius:999px;background:#0f1f56;border:1px solid var(--border);font-size:12px}
+    .toolbar{display:flex;gap:6px;flex-wrap:wrap}
+    .stack{display:flex;flex-direction:column;gap:8px}
+    .thumbs{display:flex;gap:8px;overflow:auto;padding-bottom:4px}
+    .thumbs img{height:72px;border-radius:10px;border:1px solid var(--border)}
+    .list{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto}
+    .logbox{white-space:pre-wrap;background:#081028;border:1px solid var(--border);padding:10px;border-radius:10px;min-height:120px;max-height:260px;overflow:auto;color:#dbeafe}
+    .small{font-size:12px}
   </style>
 </head>
 <body>
-  <div class="topbar">
-    <button id="btnApi" class="btn ghost" title="API Base & Key">API</button>
-    <button id="btnLogs" class="btn ghost">Logs</button>
-    <button id="btnSelfTest" class="btn ghost">Self-Test</button>
-
-    <span class="pill" id="statusPill">Not connected</span>
-    <input id="apiBase" type="text" placeholder="API Base e.g. https://…/api" />
-    <input id="apiKey" type="password" placeholder="API Key" />
-    <button id="btnSaveCfg" class="btn">Save</button>
-  </div>
-
-  <div class="wrap">
-    <!-- Recording / Capture -->
-    <div class="card">
-      <h3 class="sectionTitle">Session Recording</h3>
-      <div class="grid">
-        <div>
-          <div class="row">
-            <div style="flex:1">
-              <label for="selConf">Conference</label>
-              <select id="selConf"></select>
-            </div>
-            <button id="btnAddConf" class="btn secondary">+ Conference</button>
-          </div>
-          <div class="row" style="margin-top:.5rem">
-            <div style="flex:1">
-              <label for="selVendor">Vendor</label>
-              <select id="selVendor"></select>
-            </div>
-            <button id="btnAddVendor" class="btn secondary">+ Vendor</button>
-          </div>
-          <p class="note" id="unknownNote" style="display:none">No selection — will use <b>Unknown Conference/Vendor</b>.</p>
-
-          <div class="row" style="margin-top:.5rem">
-            <button id="btnStart" class="btn">Start Session</button>
-            <button id="btnStop" class="btn" disabled>Stop & Upload</button>
-          </div>
-          <p class="note" id="recStatus">Idle.</p>
-
-          <div style="margin-top:.6rem">
-            <label for="notes">Notes</label>
-            <textarea id="notes" placeholder="Type session notes… (saved as user_notes)"></textarea>
-          </div>
-        </div>
-
-        <div>
-          <label>Photos</label>
-          <input id="photos" type="file" accept="image/*" multiple />
-          <div class="previewImgs" id="photoPreview"></div>
-
-          <div style="margin-top:.6rem">
-            <label>Audio file (optional override)</label>
-            <input id="audioFile" type="file" accept="audio/*" />
-            <p class="note">If present, this file is used instead of the live recording.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Previous Sessions -->
-    <div class="card">
-      <h3 class="sectionTitle">Previous Sessions (by Vendor)</h3>
-      <div class="row">
-        <button id="btnRefreshVendor" class="btn ghost">Refresh Vendor Sessions</button>
-      </div>
-      <div id="prevSessions" class="list" aria-live="polite"></div>
-    </div>
-
-    <!-- Logs -->
-    <div class="card">
-      <div class="row logbar">
-        <h3 class="sectionTitle" style="margin-right:auto">Diagnostics & Logs</h3>
-        <button id="btnVerbose" class="btn ghost">Verbose</button>
-        <button id="btnCopy" class="btn ghost">Copy</button>
-        <button id="btnExportTxt" class="btn ghost">.txt</button>
-        <button id="btnExportJson" class="btn ghost">.json</button>
-        <button id="btnClear" class="btn ghost">Clear</button>
-      </div>
-      <div class="logs" id="logs" role="log"></div>
+  <!-- Top bar -->
+  <div class="bar">
+    <div class="wrap row">
+      <strong>conferenceBuddy — Sessions</strong>
+      <span class="pill" id="statusPill">idle</span>
+      <span class="muted small" id="hint"></span>
+      <div style="flex:1"></div>
+      <button class="btn ghost" id="btnApi">API</button>
+      <button class="btn ghost" id="btnLogs">Logs</button>
+      <button class="btn ghost" id="btnSelfTest">Self-Test</button>
     </div>
   </div>
 
-  <script>
-    // ---------------------------
-    // Tiny structured logger
-    // ---------------------------
-    const Log = (() => {
-      const el = () => document.getElementById('logs');
-      let store = [];
-      let verbose = true;
-      function now(){ return new Date().toISOString() }
-      function push(level,msg,extra="",obj=null){
-        const entry = { t: now(), level, msg, extra };
-        if (obj) Object.assign(entry, obj);
-        store.push(entry);
-        if(el()){
-          const line = JSON.stringify(entry,null,2);
-          el().textContent += (el().textContent ? "\n" : "") + line;
-          el().scrollTop = el().scrollHeight;
-        }
-        if (verbose) console[level==="error"?"error":(level==="warn"?"warn":"log")](entry);
+  <div class="wrap grid two" id="app">
+    <!-- Recorder / Uploader -->
+    <section class="card stack" id="recCard">
+      <h3 class="title">New Session</h3>
+      <div class="toolbar">
+        <input id="apiBase" class="input wide" placeholder="API Base (e.g. https://…/api)" />
+        <input id="apiKey" class="input wide" placeholder="API Key" />
+        <button class="btn" id="btnSaveCfg">Save</button>
+      </div>
+
+      <div class="toolbar">
+        <select id="conferenceSel" class="input wide"></select>
+        <select id="vendorSel" class="input wide"></select>
+        <button class="btn secondary" id="btnRefresh">Refresh Lists</button>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn ok" id="btnStart">Start</button>
+        <button class="btn danger" id="btnStop" disabled>Stop</button>
+        <span class="muted" id="timer">00:00</span>
+      </div>
+
+      <div class="stack">
+        <label class="muted">Notes</label>
+        <textarea id="notes" class="input" rows="6" placeholder="Your notes…"></textarea>
+      </div>
+
+      <div class="stack">
+        <label class="muted">Add Photos</label>
+        <input id="photoPicker" class="input" type="file" accept="image/*" multiple />
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn" id="btnUpload" disabled>Upload Session</button>
+        <button class="btn ghost" id="btnClear">Clear</button>
+      </div>
+
+      <div class="stack small">
+        <div>Recorder: <span id="recInfo">n/a</span></div>
+        <div>Audio size: <span id="audSize">0.00 MB</span></div>
+      </div>
+    </section>
+
+    <!-- Previous sessions -->
+    <section class="card stack">
+      <h3 class="title">Previous Sessions</h3>
+      <button class="btn secondary" id="btnLoadSessions">Load Sessions</button>
+      <div class="list" id="sessionList"></div>
+    </section>
+
+    <!-- Diagnostics -->
+    <section class="card stack" style="grid-column:1/-1;">
+      <h3 class="title">Diagnostics & Logs</h3>
+      <div class="toolbar">
+        <label class="muted"><input type="checkbox" id="verbose" /> Verbose</label>
+        <button class="btn ghost" id="btnCopy">Copy</button>
+        <button class="btn ghost" id="btnDownloadTxt">.txt</button>
+        <button class="btn ghost" id="btnDownloadJson">.json</button>
+        <span class="muted small" id="logStats"></span>
+      </div>
+      <div id="logs" class="logbox" aria-live="polite"></div>
+    </section>
+  </div>
+
+<script>
+(() => {
+  // ------------------ Logger ------------------
+  const logsEl = document.getElementById('logs');
+  const logStats = document.getElementById('logStats');
+  const verboseChk = document.getElementById('verbose');
+  const logBuf = [];
+  const log = (level, msg, extra = '') => {
+    const entry = { t: new Date().toISOString(), level, msg, extra };
+    logBuf.push(entry);
+    const short = !verboseChk.checked;
+    const line = short ? `${entry.t} [${level.toUpperCase()}] ${msg}` :
+      JSON.stringify(entry, null, 2);
+    const needNL = logsEl.textContent && !logsEl.textContent.endsWith("\n");
+    logsEl.textContent += (needNL ? "\n" : "") + line + "\n";
+    logsEl.scrollTop = logsEl.scrollHeight;
+    logStats.textContent = `${logBuf.length} entries`;
+    return entry;
+  };
+  const logHttpReq = (id, method, url, headers) =>
+    log('info', `HTTP ${method} ${url}`, `→ request`) &&
+    log('info', JSON.stringify({id, method, url, reqHeaders: headers || {} }));
+  const logHttpRes = (id, url, dur, status, resHeaders, body) => {
+    log('info', `HTTP ${url}`, `← ${status}  (${dur}ms)`);
+    log('info', JSON.stringify({id, dur: String(dur), status, resHeaders, body: (body || '') + "\n"}));
+  };
+
+  // ------------------ State ------------------
+  const els = {
+    apiBase: document.getElementById('apiBase'),
+    apiKey: document.getElementById('apiKey'),
+    btnSaveCfg: document.getElementById('btnSaveCfg'),
+    btnRefresh: document.getElementById('btnRefresh'),
+    conferenceSel: document.getElementById('conferenceSel'),
+    vendorSel: document.getElementById('vendorSel'),
+    btnStart: document.getElementById('btnStart'),
+    btnStop: document.getElementById('btnStop'),
+    timer: document.getElementById('timer'),
+    recInfo: document.getElementById('recInfo'),
+    audSize: document.getElementById('audSize'),
+    notes: document.getElementById('notes'),
+    photoPicker: document.getElementById('photoPicker'),
+    thumbs: document.getElementById('thumbs'),
+    btnUpload: document.getElementById('btnUpload'),
+    btnClear: document.getElementById('btnClear'),
+    btnLoadSessions: document.getElementById('btnLoadSessions'),
+    sessionList: document.getElementById('sessionList'),
+    statusPill: document.getElementById('statusPill'),
+    hint: document.getElementById('hint'),
+    btnApi: document.getElementById('btnApi'),
+    btnLogs: document.getElementById('btnLogs'),
+    btnSelfTest: document.getElementById('btnSelfTest'),
+    btnCopy: document.getElementById('btnCopy'),
+    btnDownloadTxt: document.getElementById('btnDownloadTxt'),
+    btnDownloadJson: document.getElementById('btnDownloadJson'),
+  };
+
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let recStart = 0;
+  let timerId = null;
+  let chosenMime = null;
+  let photos = [];
+  let lastAudioBlob = null;
+
+  // ------------------ Helpers ------------------
+  const sleep = ms => new Promise(r=>setTimeout(r,ms));
+  const fmtBytes = b => (b/1048576).toFixed(2) + " MB";
+  const setStatus = (txt, kind='pill') => els.statusPill.textContent = txt;
+
+  const saveCfg = () => {
+    localStorage.setItem('cb.apiBase', els.apiBase.value.trim());
+    localStorage.setItem('cb.apiKey', els.apiKey.value.trim());
+    log('info','Config updated.');
+  };
+  const loadCfg = () => {
+    els.apiBase.value = localStorage.getItem('cb.apiBase') || '';
+    els.apiKey.value = localStorage.getItem('cb.apiKey') || '';
+  };
+
+  function apiUrl(path){
+    const base = els.apiBase.value.trim().replace(/\/+$/,'');
+    if(!base) throw new Error('API base URL not configured.');
+    return path.startsWith('/') ? base + path : base + '/' + path;
+  }
+  async function apiFetch(path, {method='GET',headers={},body=null,raw=false}={}){
+    const url = apiUrl(path);
+    const id = Math.random().toString(36).slice(2);
+    const hdrs = new Headers(headers);
+    if(!hdrs.has('Accept')) hdrs.set('Accept','application/json');
+    if(els.apiKey.value.trim()) hdrs.set('X-API-Key', els.apiKey.value.trim());
+    logHttpReq(id, method, url, Object.fromEntries(hdrs.entries()));
+    const t0 = performance.now();
+    let res, text;
+    try{
+      res = await fetch(url, {method, headers:hdrs, body});
+      text = raw ? '' : await res.text();
+    }catch(e){
+      log('error',`Could not fetch ${url}: ${e.message}`);
+      throw e;
+    }
+    const dur = Math.round(performance.now()-t0);
+    const ct = res.headers.get('content-type') || '';
+    const bodyOut = raw ? '[binary]' : text;
+    logHttpRes(id, `POST ${url}`, dur, res.status, Object.fromEntries(res.headers.entries()), bodyOut);
+    if(!res.ok){
+      const msg = `HTTP ${res.status} — ${bodyOut || res.statusText}`;
+      log('error', msg);
+      throw new Error(msg);
+    }
+    if(raw) return res;
+    if(ct.includes('application/json')){
+      try { return JSON.parse(text); } catch{ return text; }
+    }
+    return text;
+  }
+
+  // Pick best supported mime for MediaRecorder
+  function pickAudioMime(){
+    const prefer = [
+      'audio/ogg;codecs=opus', // accepted by backend (ogg)
+      'audio/ogg',
+      'audio/webm;codecs=opus',
+      'audio/webm'
+    ];
+    for(const m of prefer){
+      if(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)){
+        return m;
       }
-      return {
-        info:(m,e="",o)=>push("info",m,e,o),
-        warn:(m,e="",o)=>push("warn",m,e,o),
-        error:(m,e="",o)=>push("error",m,e,o),
-        setVerbose:(v)=>{ verbose=v; },
-        clear:()=>{ store=[]; if(el()) el().textContent=""; },
-        exportTxt:()=> new Blob([store.map(s=>JSON.stringify(s)).join("\n")],{type:"text/plain"}),
-        exportJson:()=> new Blob([JSON.stringify(store,null,2)],{type:"application/json"}),
-        get:()=>store.slice()
-      }
-    })();
+    }
+    return ''; // let browser decide (likely webm)
+  }
 
-    // ---------------------------
-    // Config persistence
-    // ---------------------------
-    const cfg = {
-      apiBase: localStorage.getItem("cb_api_base") || "",
-      apiKey: localStorage.getItem("cb_api_key") || "",
-    };
-    function saveCfg(){
-      const apiBase = document.getElementById('apiBase').value.trim();
-      const apiKey  = document.getElementById('apiKey').value.trim();
-      cfg.apiBase = apiBase; cfg.apiKey = apiKey;
-      localStorage.setItem("cb_api_base", apiBase);
-      localStorage.setItem("cb_api_key", apiKey);
-      Log.info("Config updated.");
-      setStatus("Config saved", "success");
-      initData();
+  // Transcode a Blob (webm/ogg) to WAV (PCM16)
+  async function transcodeToWav(blob){
+    const arr = await blob.arrayBuffer();
+    const ctx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 44100 * 30, 44100); // buffer up to ~30s
+    // decode
+    let audioBuf;
+    try{
+      audioBuf = await ctx.decodeAudioData(arr.slice(0));
+    }catch(e){
+      log('error', 'decodeAudioData failed: '+e.message);
+      throw e;
     }
-    function setStatus(text, kind=""){
-      const pill = document.getElementById('statusPill');
-      pill.textContent = text;
-      pill.className = "pill " + (kind||"");
+    // interleave mono
+    const ch = audioBuf.numberOfChannels > 0 ? audioBuf.getChannelData(0) : new Float32Array();
+    // encode PCM16 WAV
+    const wav = pcm16Wav(ch, audioBuf.sampleRate);
+    return new Blob([wav], {type:'audio/wav'});
+  }
+  function pcm16Wav(float32, sampleRate){
+    const numFrames = float32.length;
+    const bytesPerSample = 2;
+    const blockAlign = 1 * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = numFrames * bytesPerSample;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+    let offset = 0;
+    const writeStr = s => { for(let i=0;i<s.length;i++) view.setUint8(offset++, s.charCodeAt(i)); };
+    writeStr('RIFF');
+    view.setUint32(offset, 36 + dataSize, true); offset+=4;
+    writeStr('WAVE');
+    writeStr('fmt ');
+    view.setUint32(offset, 16, true); offset+=4; // PCM subchunk size
+    view.setUint16(offset, 1, true); offset+=2; // PCM
+    view.setUint16(offset, 1, true); offset+=2; // mono
+    view.setUint32(offset, sampleRate, true); offset+=4;
+    view.setUint32(offset, byteRate, true); offset+=4;
+    view.setUint16(offset, blockAlign, true); offset+=2;
+    view.setUint16(offset, 16, true); offset+=2; // bits
+    writeStr('data');
+    view.setUint32(offset, dataSize, true); offset+=4;
+    // samples
+    for(let i=0;i<numFrames;i++){
+      let s = Math.max(-1, Math.min(1, float32[i]));
+      view.setInt16(offset, s<0 ? s*0x8000 : s*0x7fff, true);
+      offset+=2;
     }
+    return buffer;
+  }
 
-    // ---------------------------
-    // Minimal API helpers
-    // ---------------------------
-    function assertCfg(){
-      if(!cfg.apiBase){ throw new Error("API base URL not configured.") }
-      if(!cfg.apiKey){ throw new Error("API key not configured.") }
-    }
-    async function apiGET(path){
-      assertCfg();
-      const url = cfg.apiBase.replace(/\/+$/,"") + path;
-      const id = Math.random().toString(36).slice(2);
-      Log.info(`HTTP GET ${url}`,"→ request");
-      Log.info(JSON.stringify({id,method:"GET",url,reqHeaders:{Accept:"application/json","X-API-Key":"***"}}));
-      const t0 = performance.now();
-      const res = await fetch(url,{headers:{"X-API-Key":cfg.apiKey,"Accept":"application/json"}});
-      const dur = Math.round(performance.now()-t0);
-      Log.info(`HTTP GET ${url}`,`← ${res.status}  (${dur}ms)`);
-      const body = await res.text();
-      Log.info(JSON.stringify({id,dur:String(dur),status:res.status,resHeaders:objFromHeaders(res.headers),body:body+"\n"}));
-      if(!res.ok) throw new Error(`HTTP ${res.status} — ${body}`);
-      try { return JSON.parse(body) } catch { return body }
-    }
-    async function apiPOSTJson(path, payload){
-      assertCfg();
-      const url = cfg.apiBase.replace(/\/+$/,"") + path;
-      const id = Math.random().toString(36).slice(2);
-      Log.info(`HTTP POST ${url}`,"→ request");
-      Log.info(JSON.stringify({id,method:"POST",url,reqHeaders:{Accept:"application/json","X-API-Key":"***","Content-Type":"application/json"}}));
-      const t0 = performance.now();
-      const res = await fetch(url,{
-        method:"POST",
-        headers:{"X-API-Key":cfg.apiKey,"Content-Type":"application/json","Accept":"application/json"},
-        body: JSON.stringify(payload)
-      });
-      const dur = Math.round(performance.now()-t0);
-      Log.info(`HTTP POST ${url}`,`← ${res.status}  (${dur}ms)`);
-      const text = await res.text();
-      Log.info(JSON.stringify({id,dur:String(dur),status:res.status,resHeaders:objFromHeaders(res.headers),body:text+"\n"}));
-      if(!res.ok) throw new Error(`HTTP ${res.status} — ${text}`);
-      try { return JSON.parse(text) } catch { return text }
-    }
-    async function apiPOSTForm(path, formData){
-      assertCfg();
-      const url = cfg.apiBase.replace(/\/+$/,"") + path;
-      const id = Math.random().toString(36).slice(2);
-      Log.info(`HTTP POST ${url}`,"→ request");
-      Log.info(JSON.stringify({id,method:"POST",url,reqHeaders:{Accept:"application/json","X-API-Key":"***"}}));
-      const t0 = performance.now();
-      // IMPORTANT: DO NOT set Content-Type for multipart
-      const res = await fetch(url,{ method:"POST", headers:{ "X-API-Key":cfg.apiKey }, body:formData });
-      const dur = Math.round(performance.now()-t0);
-      Log.info(`HTTP POST ${url}`,`← ${res.status}  (${dur}ms)`);
-      const text = await res.text();
-      Log.info(JSON.stringify({id,dur:String(dur),status:res.status,resHeaders:objFromHeaders(res.headers),body:text+"\n"}));
-      if(!res.ok) throw new Error(`HTTP ${res.status} — ${text}`);
-      try { return JSON.parse(text) } catch { return text }
-    }
-    function objFromHeaders(h){
-      const o={}; h.forEach((v,k)=>o[k]=v); return o;
-    }
+  function resetUIAfterUpload(){
+    els.notes.value = '';
+    photos = [];
+    els.thumbs.innerHTML = '';
+    lastAudioBlob = null;
+    els.audSize.textContent = '0.00 MB';
+    setStatus('uploaded');
+  }
 
-    // ---------------------------
-    // App state & media
-    // ---------------------------
-    let mediaRecorder=null, recordedChunks=[], sessionStartISO=null;
-    function onPhotosChanged(){
-      const pre = document.getElementById('photoPreview');
-      pre.innerHTML="";
-      const files = document.getElementById('photos').files || [];
-      [...files].forEach(f=>{
-        const url = URL.createObjectURL(f);
-        const img = new Image(); img.src=url; pre.appendChild(img);
-      });
-    }
+  // ------------------ UI Wiring ------------------
+  els.btnCopy.onclick = () => {
+    navigator.clipboard.writeText(logsEl.textContent || '');
+    log('info','Logs copied to clipboard.');
+  };
+  els.btnDownloadTxt.onclick = () => {
+    const blob = new Blob([logsEl.textContent || ''], {type:'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'cb-logs.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  els.btnDownloadJson.onclick = () => {
+    const blob = new Blob([JSON.stringify(logBuf,null,2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'cb-logs.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
 
-    async function initData(){
-      // set inputs
-      document.getElementById('apiBase').value = cfg.apiBase;
-      document.getElementById('apiKey').value = cfg.apiKey;
-      if(!cfg.apiBase || !cfg.apiKey){
-        Log.error("Could not load initial data: API base URL not configured.");
-        setStatus("Missing config","warning"); return;
-      }
+  // Toggle panels shortcuts
+  els.btnApi.onclick = () => { window.scrollTo({top:0,behavior:'smooth'}); };
+  els.btnLogs.onclick = () => { document.getElementById('logs').scrollIntoView({behavior:'smooth',block:'center'}); };
+  els.btnSelfTest.onclick = async () => {
+    try{
+      await refreshLists();
+      await sleep(100);
+      await apiFetch('/health');
+      log('info','Self-test OK.');
+    }catch(e){ log('error','Self-test failed: ' + e.message); }
+  };
+
+  els.btnSaveCfg.onclick = async () => {
+    saveCfg();
+    try{
+      await refreshLists();
+    }catch(e){
+      log('error','Could not load initial data: ' + e.message);
+    }
+  };
+  els.btnRefresh.onclick = () => refreshLists().catch(e=>log('error',e.message));
+
+  // Photo picker previews
+  els.photoPicker.addEventListener('change', (e)=>{
+    photos = Array.from(e.target.files || []);
+    els.thumbs.innerHTML = '';
+    photos.forEach(f=>{
+      const url = URL.createObjectURL(f);
+      const img = new Image();
+      img.onload = ()=> URL.revokeObjectURL(url);
+      img.src = url;
+      els.thumbs.appendChild(img);
+    });
+  });
+
+  // Recording controls
+  els.btnStart.onclick = async () => {
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      chosenMime = pickAudioMime();
+      const opts = chosenMime ? {mimeType: chosenMime} : {};
+      mediaRecorder = new MediaRecorder(stream, opts);
+      recordedChunks = [];
+      mediaRecorder.ondataavailable = e => { if(e.data && e.data.size>0) recordedChunks.push(e.data); };
+      mediaRecorder.onstart = ()=> {
+        setStatus('recording');
+        log('info','Audio recording started.');
+        recStart = Date.now();
+        ElsEnable(false,true);
+        tickTimer();
+      };
+      mediaRecorder.onstop = ()=> {
+        clearInterval(timerId);
+        const blob = new Blob(recordedChunks, { type: chosenMime || 'audio/webm' });
+        lastAudioBlob = blob;
+        els.audSize.textContent = fmtBytes(blob.size);
+        log('info', `Audio captured: ${fmtBytes(blob.size)}`);
+        ElsEnable(true,false,true);
+        setStatus('ready');
+      };
+      mediaRecorder.start(250);
+      mediaRecorder.stream.getAudioTracks()[0].enabled = true;
+      els.recInfo.textContent = chosenMime || '(browser default)';
+    }catch(e){
+      log('error','Mic error: '+e.message);
+      alert('Microphone permission/recording failed.');
+    }
+  };
+  els.btnStop.onclick = () => {
+    if(mediaRecorder && mediaRecorder.state !== 'inactive'){
+      log('info','Stopping recorder…');
+      mediaRecorder.stop();
+      mediaRecorder.stream.getTracks().forEach(t=>t.stop());
+    }
+  };
+
+  function tickTimer(){
+    timerId = setInterval(()=>{
+      const s = Math.floor((Date.now()-recStart)/1000);
+      const mm = String(Math.floor(s/60)).padStart(2,'0');
+      const ss = String(s%60).padStart(2,'0');
+      els.timer.textContent = `${mm}:${ss}`;
+    }, 200);
+  }
+
+  function ElsEnable(upload=false, stop=false, post=false){
+    els.btnStart.disabled = stop;
+    els.btnStop.disabled = !stop;
+    els.btnUpload.disabled = !upload;
+  }
+
+  els.btnClear.onclick = ()=>{
+    recordedChunks = [];
+    lastAudioBlob = null;
+    photos = [];
+    els.thumbs.innerHTML='';
+    els.notes.value='';
+    els.audSize.textContent='0.00 MB';
+    setStatus('idle');
+  };
+
+  // Load dropdown lists
+  async function refreshLists(){
+    const base = els.apiBase.value.trim();
+    if(!base){ log('error','Could not load initial data: API base URL not configured.'); throw new Error('API base URL not configured.'); }
+    // Conferences
+    const conf = await apiFetch('/conferences');
+    const conferences = (conf && conf.data) || [];
+    els.conferenceSel.innerHTML = '';
+    addOpt(els.conferenceSel,'','— Select conference (or leave blank) —');
+    conferences.forEach(c=> addOpt(els.conferenceSel, c.id, c.name));
+    // Vendors (global as a fallback)
+    let vendors = [];
+    try{
+      const vend = await apiFetch('/vendors');
+      vendors = (vend && vend.data) || [];
+    }catch{ vendors = []; }
+    els.vendorSel.innerHTML='';
+    addOpt(els.vendorSel,'','— Select vendor (or leave blank) —');
+    vendors.forEach(v=> addOpt(els.vendorSel, v.id, v.name));
+    log('info','Dropdowns populated from API.');
+  }
+  function addOpt(sel, val, label){ const o=document.createElement('option');o.value=val;o.textContent=label;sel.appendChild(o); }
+
+  // Unknown fallbacks
+  async function ensureUnknowns(){
+    let confId = els.conferenceSel.value;
+    let vendId = els.vendorSel.value;
+    if(!confId){
+      // Create "Unknown Conference" once per day
+      const today = new Date().toISOString().slice(0,10);
       try{
-        setStatus("Connecting…","warning");
-        // health (optional)
-        await apiGET("/health").catch(()=>{});
-        // conferences
-        const confs = await apiGET("/conferences");
-        fillConferences((confs && confs.data) || []);
-        // vendors (fallback list)
-        const vends = await apiGET("/vendors");
-        fillVendors((vends && vends.data) || []);
-        setStatus("Connected","success");
-        Log.info("Dropdowns populated from API.");
+        const body = JSON.stringify({name:'Unknown Conference', start_date: today, end_date: today});
+        const res = await apiFetch('/conferences', {method:'POST', headers:{'Content-Type':'application/json'}, body});
+        confId = res.id || (res.data && res.data.id) || (res && res.conference_id) || confId;
+      }catch(e){ /* maybe exists */ 
+        // search existing
+        const list = await apiFetch('/conferences');
+        const hit = (list.data||[]).find(c=>c.name==='Unknown Conference');
+        confId = hit ? hit.id : confId;
+      }
+    }
+    if(!vendId){
+      try{
+        const res = await apiFetch('/vendors', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name:'Unknown Vendor', conference_id: confId || null})});
+        vendId = res.id || (res.data && res.data.id) || vendId;
       }catch(e){
-        Log.error(`Could not load initial data: ${e.message||e}`);
-        setStatus("API error","error");
+        // search
+        const all = await apiFetch('/vendors');
+        const hit = (all.data||[]).find(v=>v.name==='Unknown Vendor' && (!confId || v.conference_id===confId));
+        vendId = hit ? hit.id : vendId;
       }
     }
-    function fillConferences(list){
-      const sel = document.getElementById('selConf');
-      sel.innerHTML = `<option value="">— Select conference (or leave blank) —</option>` +
-        list.map(c=>`<option value="${c.id}">${escapeHtml(c.name||"Untitled")}</option>`).join("");
-    }
-    function fillVendors(list){
-      const sel = document.getElementById('selVendor');
-      sel.innerHTML = `<option value="">— Select vendor (or leave blank) —</option>` +
-        list.map(v=>`<option value="${v.id}" data-conf="${v.conference_id||""}">${escapeHtml(v.name||"Untitled")}</option>`).join("");
-    }
+    return {confId, vendId};
+  }
 
-    async function ensureUnknownsIfNeeded(){
-      let confId = document.getElementById('selConf').value;
-      let vendId = document.getElementById('selVendor').value;
+  // Upload flow (single-step preferred per KB; handles audio type fix)
+  els.btnUpload.onclick = async () => {
+    try{
+      const { confId, vendId } = await ensureUnknowns();
+      if(!confId || !vendId){ throw new Error('Could not ensure conference/vendor.'); }
 
-      const unknownNote = document.getElementById('unknownNote');
-      unknownNote.style.display = (!confId || !vendId) ? "block" : "none";
-
-      // If missing, ensure "Unknown Conference" exists (start/end today)
-      if(!confId){
-        const today = new Date().toISOString().slice(0,10);
-        const { data } = await apiGET("/conferences");
-        const found = (data||[]).find(c => (c.name||"").toLowerCase()==="unknown conference");
-        if(found){ confId = found.id; }
-        else {
-          const created = await apiPOSTJson("/conferences", {
-            name: "Unknown Conference",
-            start_date: today,
-            end_date: today
-          });
-          confId = created?.data?.id || created?.id;
-        }
-      }
-      // If missing, ensure "Unknown Vendor" exists under that conference
-      if(!vendId){
-        const { data } = await apiGET(`/conferences/${confId}/vendors`);
-        const found = (data||[]).find(v => (v.name||"").toLowerCase()==="unknown vendor");
-        if(found){ vendId = found.id; }
-        else {
-          const created = await apiPOSTJson("/vendors", {
-            name: "Unknown Vendor",
-            conference_id: confId
-          });
-          vendId = created?.data?.id || created?.id;
-        }
-      }
-      // Sync select boxes for UX
-      if(confId) document.getElementById('selConf').value = confId;
-      if(vendId) document.getElementById('selVendor').value = vendId;
-
-      return { conference_id: confId, vendor_id: vendId };
-    }
-
-    // ---------------------------
-    // Recording controls
-    // ---------------------------
-    async function startSession(){
-      try{
-        await ensureUnknownsIfNeeded(); // create/use unknowns early
-        recordedChunks=[]; sessionStartISO = new Date().toISOString();
-        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-        mediaRecorder = new MediaRecorder(stream, { mimeType: pickAudioMime() });
-        mediaRecorder.ondataavailable = e => { if(e.data && e.data.size>0) recordedChunks.push(e.data); };
-        mediaRecorder.start();
-        Log.info("Audio recording started.");
-        document.getElementById('btnStart').disabled = true;
-        document.getElementById('btnStop').disabled = false;
-        document.getElementById('recStatus').textContent = "Recording…";
-        Log.info("Session started. Recording in progress.");
-      }catch(e){
-        Log.error("Could not start recording: " + (e.message||e));
-        setStatus("Mic error","error");
-      }
-    }
-    function pickAudioMime(){
-      if(MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) return "audio/webm;codecs=opus";
-      if(MediaRecorder.isTypeSupported("audio/webm")) return "audio/webm";
-      return ""; // let browser decide
-    }
-    async function stopAndUpload(){
-      document.getElementById('btnStop').disabled = true;
-      try{
-        if(mediaRecorder && mediaRecorder.state!=="inactive"){
-          Log.info("Stopping recorder…");
-          await new Promise(res=>{
-            mediaRecorder.onstop = res;
-            mediaRecorder.stop();
-          });
-        }
-        const blob = await buildAudioBlob();
-        Log.info(`Audio captured: ${(blob ? (blob.size/1024/1024).toFixed(2) : "0.00")} MB`);
-        const { conference_id, vendor_id } = await ensureUnknownsIfNeeded();
-        await uploadSession({ conference_id, vendor_id, audioBlob: blob });
-      }catch(e){
-        Log.error("Upload flow failed: " + (e.message||e));
-      }finally{
-        document.getElementById('btnStart').disabled = false;
-        document.getElementById('recStatus').textContent = "Idle.";
-      }
-    }
-    async function buildAudioBlob(){
-      const fileInput = document.getElementById('audioFile');
-      if(fileInput.files && fileInput.files.length>0) return fileInput.files[0];
-      if(!recordedChunks || recordedChunks.length===0) return null;
-      // choose container based on first chunk type
-      const type = recordedChunks[0].type || "audio/webm";
-      return new Blob(recordedChunks,{ type });
-    }
-
-    // ---------------------------
-    // Upload (single-step multipart)
-    // ---------------------------
-    async function uploadSession({ conference_id, vendor_id, audioBlob }){
-      // Build multipart body exactly per API guidance.
-      const fd = new FormData();
-      fd.append("vendor_id", vendor_id);
-      fd.append("conference_id", conference_id);
-      const startISO = sessionStartISO || new Date().toISOString();
-      fd.append("start_time", startISO);
-      fd.append("end_time", new Date().toISOString());
-
-      const notes = document.getElementById('notes').value || "";
-      // API expects user_notes (NOT "notes")
-      if(notes.trim().length>0) fd.append("user_notes", notes);
-
-      // Audio (optional)
-      if(audioBlob && audioBlob.size>0){
-        // Name file with stable name + extension from mimetype if possible
-        const ext = mimeToExt(audioBlob.type) || "webm";
-        fd.append("audio_file", audioBlob, `session_audio.${ext}`);
-      }
-
-      // Photos (0..N)
-      const pics = document.getElementById('photos').files || [];
-      for(const f of pics){ fd.append("photos", f, f.name); }
-
-      try{
-        const res = await apiPOSTForm("/sessions/upload", fd);
-        setStatus("Uploaded (201/200)","success");
-        Log.info("Session created with media (multipart).");
-        // Refresh sessions list for selected vendor
-        await refreshVendorSessions();
-      }catch(err){
-        Log.error("Upload failed: " + (err.message||err));
-        setStatus("Upload error","error");
-      }
-    }
-    function mimeToExt(m){
-      if(!m) return "";
-      if(m.includes("webm")) return "webm";
-      if(m.includes("ogg")) return "ogg";
-      if(m.includes("wav")) return "wav";
-      if(m.includes("mp3")) return "mp3";
-      if(m.includes("m4a")) return "m4a";
-      return "";
-    }
-
-    // ---------------------------
-    // Previous Sessions viewer
-    // ---------------------------
-    async function refreshVendorSessions(){
-      try{
-        const vendId = document.getElementById('selVendor').value;
-        if(!vendId){ document.getElementById('prevSessions').innerHTML = `<div class="item muted">Select a vendor to view sessions.</div>`; return; }
-        const data = await apiGET(`/vendors/${vendId}`);
-        const v = data?.data;
-        const sessions = Array.isArray(v?.sessions)? v.sessions : [];
-        const el = document.getElementById('prevSessions');
-        if(sessions.length===0){
-          el.innerHTML = `<div class="item muted">No sessions for this vendor yet.</div>`;
-          return;
-        }
-        el.innerHTML = sessions.map(s => {
-          return `<div class="item">
-            <div><b>${escapeHtml(s.session_type||"session")}</b> — <span class="muted">${escapeHtml(s.status||"")}</span></div>
-            <div class="muted">${escapeHtml(s.start_time||"")} → ${escapeHtml(s.end_time||"")}</div>
-            ${s.user_notes ? `<div style="margin-top:.35rem">${escapeHtml(String(s.user_notes))}</div>`:""}
-            ${Array.isArray(s.files_uploaded)&&s.files_uploaded.length? `
-              <div class="muted" style="margin-top:.35rem">Files:</div>
-              <ul class="muted">${s.files_uploaded.map(f=>`<li><a href="${f.url}" target="_blank" rel="noopener">${escapeHtml(f.filename||f.url)}</a></li>`).join("")}</ul>
-            `:""}
-            ${Array.isArray(s.photo_urls)&&s.photo_urls.length? `
-              <div class="previewImgs" style="margin-top:.35rem">
-                ${s.photo_urls.map(u=>`<a href="${u}" target="_blank" rel="noopener"><img src="${u}" alt="photo"/></a>`).join("")}
-              </div>
-            `:""}
-          </div>`;
-        }).join("");
-      }catch(e){
-        Log.error("Could not load vendor sessions: " + (e.message||e));
-      }
-    }
-
-    // ---------------------------
-    // Add new conference / vendor
-    // ---------------------------
-    async function addConferenceQuick(){
-      const name = prompt("Conference name (required):","New Conference");
-      if(!name) return;
-      const d = new Date().toISOString().slice(0,10);
-      try{
-        const res = await apiPOSTJson("/conferences", { name, start_date:d, end_date:d });
-        Log.info("Conference created.");
-        await initData();
-        document.getElementById('selConf').value = res?.data?.id || res?.id;
-      }catch(e){ Log.error("Create conference failed: " + (e.message||e)) }
-    }
-    async function addVendorQuick(){
-      const confId = document.getElementById('selConf').value;
-      if(!confId){
-        alert("Select a conference first (or click Start to auto-create Unknown Conference).");
-        return;
-      }
-      const name = prompt("Vendor name (required):","New Vendor");
-      if(!name) return;
-      try{
-        const res = await apiPOSTJson("/vendors", { name, conference_id: confId });
-        Log.info("Vendor created.");
-        await initData();
-        document.getElementById('selVendor').value = res?.data?.id || res?.id;
-      }catch(e){ Log.error("Create vendor failed: " + (e.message||e)) }
-    }
-
-    // ---------------------------
-    // Self-test (CORS + basic)
-    // ---------------------------
-    async function selfTest(){
-      try{
-        await apiGET("/conferences");
-        await apiGET("/vendors");
-        await apiGET("/health");
-        setStatus("Self-Test OK","success");
-      }catch(e){
-        Log.error("Self-Test failed: " + (e.message||e));
-        setStatus("Self-Test failed","error");
-      }
-    }
-
-    // ---------------------------
-    // Utilities / UI wiring
-    // ---------------------------
-    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])) }
-    function bind(id, ev, fn){ document.getElementById(id)?.addEventListener(ev, fn) }
-
-    // Button/controls wiring
-    document.addEventListener("DOMContentLoaded", () => {
-      // Fill config inputs
-      document.getElementById('apiBase').value = cfg.apiBase;
-      document.getElementById('apiKey').value = cfg.apiKey;
-
-      bind("btnSaveCfg","click",saveCfg);
-      bind("btnApi","click",()=>alert("Enter API Base & Key in the top bar then click Save."));
-      bind("btnLogs","click",()=>document.getElementById('logs').scrollIntoView({behavior:"smooth"}));
-      bind("btnSelfTest","click",selfTest);
-
-      bind("photos","change",onPhotosChanged);
-
-      bind("btnStart","click",startSession);
-      bind("btnStop","click",stopAndUpload);
-
-      bind("btnAddConf","click",addConferenceQuick);
-      bind("btnAddVendor","click",addVendorQuick);
-
-      bind("selConf","change", async (e)=>{
-        const id = e.target.value;
-        if(id){
+      // Ensure acceptable audio type
+      let audioBlob = lastAudioBlob;
+      let audioName = 'session_audio';
+      let okTypes = ['audio/ogg','audio/wav','audio/mp3','audio/mpeg','audio/aac','audio/mp4','audio/x-m4a'];
+      if(audioBlob){
+        if(audioBlob.type.startsWith('audio/ogg')){
+          audioName += '.ogg';
+        }else if(audioBlob.type.startsWith('audio/wav')){
+          audioName += '.wav';
+        }else if(audioBlob.type === 'audio/mpeg' || audioBlob.type === 'audio/mp3'){
+          audioName += '.mp3';
+        }else{
+          // transcode webm → wav
+          log('warn','Browser produced '+audioBlob.type+'; transcoding to WAV for compatibility…');
           try{
-            const data = await apiGET(`/conferences/${id}/vendors`);
-            fillVendors((data && data.data)||[]);
-          }catch(_){
-            // fallback to list all
-            const v = await apiGET("/vendors");
-            fillVendors((v && v.data)||[]);
+            audioBlob = await transcodeToWav(audioBlob);
+            audioName += '.wav';
+          }catch(e){
+            log('error','Transcode failed: '+e.message);
+            // Continue without audio
+            audioBlob = null;
           }
         }
-      });
-      bind("btnRefreshVendor","click",refreshVendorSessions);
+      }
 
-      bind("btnVerbose","click",()=>{
-        Log.setVerbose(true);
-        Log.info("Verbose logging ON");
-      });
-      bind("btnCopy","click",async ()=>{
-        const txt = Log.get().map(s=>JSON.stringify(s)).join("\n");
-        await navigator.clipboard.writeText(txt);
-        setStatus("Logs copied","success");
-      });
-      bind("btnExportTxt","click",()=>{
-        const url = URL.createObjectURL(Log.exportTxt());
-        const a = Object.assign(document.createElement('a'),{href:url,download:"cb_logs.txt"});
-        a.click(); URL.revokeObjectURL(url);
-      });
-      bind("btnExportJson","click",()=>{
-        const url = URL.createObjectURL(Log.exportJson());
-        const a = Object.assign(document.createElement('a'),{href:url,download:"cb_logs.json"});
-        a.click(); URL.revokeObjectURL(url);
-      });
-      bind("btnClear","click",()=>Log.clear());
+      const startISO = new Date(recStart || Date.now()).toISOString();
+      const fd = new FormData();
+      fd.append('vendor_id', vendId);
+      fd.append('conference_id', confId);
+      fd.append('start_time', startISO);
+      if(els.notes.value.trim()) fd.append('user_notes', els.notes.value.trim());
+      photos.forEach(f => fd.append('photos', f, f.name));
+      if(audioBlob) fd.append('audio_file', audioBlob, audioName);
 
-      // Initial data load if config present
-      if(cfg.apiBase && cfg.apiKey){ initData() }
-      else setStatus("Configure API","warning");
+      const id = Math.random().toString(36).slice(2);
+      logHttpReq(id, 'POST', apiUrl('/sessions/upload'), {'Accept':'application/json','X-API-Key':'***'});
+      const t0 = performance.now();
+      const res = await fetch(apiUrl('/sessions/upload'), {
+        method: 'POST',
+        headers: { 'X-API-Key': els.apiKey.value.trim() }, // IMPORTANT: no manual Content-Type
+        body: fd
+      });
+      const text = await res.text();
+      const dur = Math.round(performance.now()-t0);
+      logHttpRes(id, 'POST '+apiUrl('/sessions/upload'), dur, res.status, Object.fromEntries(res.headers.entries()), text);
+
+      if(res.status === 201 || res.ok){
+        setStatus('uploaded');
+        log('info','Upload complete (session created). Triggering enrichment…');
+        // Best-effort parse to show id
+        let sid=null; try{ const j=JSON.parse(text); sid = j.id || j.session_id || (j.data && j.data.id) || null; }catch{}
+        // Enrichment trigger (best effort if documented)
+        try{ await apiFetch('/sessions/enrich', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({session_id: sid})}); }catch{}
+        resetUIAfterUpload();
+        await loadSessionsList(); // refresh
+      }else{
+        throw new Error(text || res.statusText);
+      }
+    }catch(e){
+      log('error','Upload failed: ' + e.message + "\n");
+      alert('Upload failed:\n' + e.message);
+    }
+  };
+
+  async function loadSessionsList(){
+    els.sessionList.innerHTML = '';
+    // If vendor selected, fetch their details (includes sessions)
+    const vendId = els.vendorSel.value;
+    if(vendId){
+      try{
+        const d = await apiFetch(`/vendors/${vendId}`);
+        const sessions = (d && d.data && d.data.sessions) || [];
+        renderSessions(sessions);
+        return;
+      }catch(e){ log('error', 'Could not load vendor sessions: ' + e.message); }
+    }
+    // Otherwise try a general sessions list if available.
+    // If no endpoint exists, keep empty gracefully.
+  }
+
+  function renderSessions(sessions){
+    els.sessionList.innerHTML = '';
+    if(!Array.isArray(sessions) || sessions.length===0){
+      const p = document.createElement('div'); p.className='muted'; p.textContent='No sessions found.'; els.sessionList.appendChild(p); return;
+    }
+    sessions.slice().sort((a,b)=> (b.start_time||'').localeCompare(a.start_time||'')).forEach(s=>{
+      const d = document.createElement('div');
+      d.className = 'card';
+      d.innerHTML = `
+        <div class="row" style="justify-content:space-between">
+          <div><strong>${escapeHtml(s.session_type||'session')}</strong> <span class="muted">• ${escapeHtml(s.status||'')}</span></div>
+          <span class="pill">${(s.processing_status||'').toLowerCase()}</span>
+        </div>
+        <div class="small muted">${escapeHtml(s.start_time||'')} → ${escapeHtml(s.end_time||'')}</div>
+        ${s.user_notes ? `<div class="small" style="margin-top:6px;white-space:pre-wrap">${escapeHtml(s.user_notes)}</div>`:''}
+        ${Array.isArray(s.files_uploaded)&&s.files_uploaded.length ? `<div class="thumbs" style="margin-top:6px">${s.files_uploaded.map(f => f.type==='image'?`<img src="${f.url}" alt="">`:`<span class="pill">${escapeHtml(f.filename)}</span>`).join('')}</div>`:''}
+      `;
+      els.sessionList.appendChild(d);
     });
-  </script>
+  }
+
+  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // ------------------ Init ------------------
+  loadCfg();
+  // preload lists if config exists
+  if(els.apiBase.value && els.apiKey.value){
+    refreshLists().catch(e=>log('error','Could not load initial data: '+e.message));
+  }
+
+})();
+</script>
 </body>
 </html>
