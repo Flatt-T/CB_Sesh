@@ -1,603 +1,450 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-<title>ConferenceBuddy — Session Capture</title>
-<style>
-  :root {
-    --bg:#0b1220; --panel:#0f1a33; --panel2:#0c1730; --muted:#5974a8; --text:#e8f0ff; --accent:#4ea1ff; --accent2:#7cc4ff; --danger:#ff6b6b; --ok:#4cd964;
-  }
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif}
-  *{box-sizing:border-box}
-  .topbar{
-    position:sticky;top:0;z-index:50;background:linear-gradient(180deg,#0b1220 0%, #0b1220cc 100%);backdrop-filter:saturate(1.2) blur(6px);
-    border-bottom:1px solid #1d2a4a;padding:.5rem .75rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap
-  }
-  .topbar .row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
-  input[type="text"], input[type="url"], input[type="datetime-local"], select, textarea{
-    width:100%;background:var(--panel);border:1px solid #1d2a4a;color:var(--text);padding:.7rem .75rem;border-radius:.75rem;font-size:16px;outline:none
-  }
-  textarea{min-height:140px;resize:vertical}
-  .btn{
-    appearance:none;border:none;border-radius:.9rem;padding:.7rem 1rem;background:#173061;color:var(--text);font-weight:600;font-size:16px;
-    border:1px solid #274070;box-shadow:0 1px 0 #091431 inset;cursor:pointer;touch-action:manipulation
-  }
-  .btn:active{transform:translateY(1px)}
-  .btn.primary{background:linear-gradient(180deg,#2a62c3,#1e4e9e);border-color:#2d5fb2}
-  .btn.ghost{background:transparent;border-color:#2a3c66}
-  .btn.ok{background:linear-gradient(180deg,#30b86b,#179051);border-color:#2aa764}
-  .btn.warn{background:linear-gradient(180deg,#ef8354,#d25a26);border-color:#e86c3a}
-  .btn.danger{background:linear-gradient(180deg,#ff6666,#d84a4a);border-color:#e25555}
-  .grid{display:grid;gap:.75rem}
-  .card{background:var(--panel2);border:1px solid #1d2a4a;border-radius:1rem;padding:.9rem}
-  .section-title{font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin:.25rem 0 .5rem}
-  .two{grid-template-columns:1fr 1fr}
-  .three{grid-template-columns:1fr 1fr 1fr}
-  @media (max-width: 640px){ .two, .three {grid-template-columns:1fr} }
-  .chip{display:inline-flex;align-items:center;gap:.4rem;background:#11214a;border:1px solid #243b6d;border-radius:999px;padding:.35rem .6rem;font-size:12px;color:#a9c3ff}
-  .toolbar{display:flex;gap:.5rem;flex-wrap:wrap}
-  .imgGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem}
-  .imgGrid img{width:100%;height:88px;object-fit:cover;border-radius:.6rem;border:1px solid #253a6a}
-  .divider{height:1px;background:#1d2a4a;margin:.5rem 0}
-  .bottom-pad{height:80px}
-  .sticky-bottom{position:sticky;bottom:0;background:linear-gradient(0deg,#0b1220 0%, #0b1220cc 100%);padding:.5rem .75rem;border-top:1px solid #1d2a4a;z-index:40}
-  .log-wrap{max-height:45vh;overflow:auto;background:#0c1530;border:1px dashed #274070;border-radius:.75rem;padding:.75rem;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px;color:#d7e6ff}
-  .muted{color:#9fb6e6}
-  .row-spread{display:flex;justify-content:space-between;align-items:center;gap:.5rem}
-  .kbd{border:1px solid #294175;background:#0e1c3c;border-radius:.4rem;padding:.1rem .35rem;font-size:12px}
-  .hidden{display:none !important}
-  audio{width:100%}
-</style>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1"
+  />
+  <title>Conference Buddy – Sessions</title>
+  <style>
+    :root{--bg:#0e1117;--card:#151a23;--muted:#8b98a5;--text:#e6edf3;--acc:#3aa675;--acc2:#2b90d9;--danger:#e5534b}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+    header,section{max-width:860px;margin:0 auto;padding:16px}
+    h1{font-size:1.25rem;margin:0 0 8px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+    .card{background:var(--card);border:1px solid #222a35;border-radius:14px;padding:12px}
+    label{display:block;font-size:.85rem;color:var(--muted);margin:8px 0 6px}
+    select,textarea,input[type="text"],input[type="url"]{
+      width:100%;border:1px solid #273143;background:#0c111a;color:var(--text);border-radius:10px;padding:10px 12px;outline:none
+    }
+    textarea{min-height:88px;resize:vertical}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      background:#1b2430;color:var(--text);border:1px solid #2a3341;border-radius:12px;padding:10px 14px;cursor:pointer}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .btn.primary{background:var(--acc);border-color:#2f8f63;color:#06130d}
+    .btn.alt{background:var(--acc2);border-color:#1d6fa8}
+    .btn.danger{background:var(--danger);border-color:#c63f39}
+    .stack{display:flex;flex-wrap:wrap;gap:8px}
+    .pill{border:1px dashed #2b3646;border-radius:999px;padding:8px 12px;font-size:.85rem;color:var(--muted)}
+    .small{font-size:.8rem;color:var(--muted)}
+    pre{white-space:pre-wrap;word-break:break-word;background:#0c111a;border:1px solid #273143;border-radius:10px;padding:10px;max-height:280px;overflow:auto}
+    .ok{color:#6ee7a5}.warn{color:#facc15}.err{color:#fca5a5}
+    .grid{display:grid;gap:12px}
+    .stretch{width:100%}
+    input[type="file"]{width:100%}
+    .divider{height:1px;background:#223045;margin:10px 0}
+    .kpi{display:flex;gap:12px;flex-wrap:wrap}
+    .kpi span{background:#0c111a;border:1px solid #273143;border-radius:10px;padding:6px 10px}
+    @media (max-width:720px){.row,.row-3{grid-template-columns:1fr}}
+  </style>
 </head>
 <body>
+  <header>
+    <h1>Conference Buddy — Session Uploader</h1>
+    <div class="kpi">
+      <span>Two-step flow</span>
+      <span>Multi-image</span>
+      <span>Mobile audio (file)</span>
+      <span>Enrichment trigger</span>
+    </div>
+  </header>
 
-<!-- Sticky controls -->
-<div class="topbar">
-  <div class="row" style="flex:1 1 auto;min-width:220px">
-    <input id="apiBase" type="url" placeholder="API Base (e.g. https://…/api)" />
-    <input id="apiKey" type="text" placeholder="X-API-Key" />
-    <button class="btn primary" id="saveCfg">Save</button>
-  </div>
-  <div class="row">
-    <button class="btn ghost" id="btnApi">API</button>
-    <button class="btn ghost" id="btnLogs">Logs</button>
-    <button class="btn ghost" id="btnSelfTest">Self-Test</button>
-  </div>
-</div>
+  <section class="card grid">
 
-<div class="grid" style="padding:.75rem">
-  <!-- SESSION CAPTURE -->
-  <div class="card">
-    <div class="row-spread">
-      <h3 style="margin:0">Record Session</h3>
-      <span class="chip" id="recState">idle</span>
+    <div class="row">
+      <div>
+        <label>API Base URL</label>
+        <input id="apiBase" type="url" placeholder="https://conference-buddy-geoutils.replit.app/api" />
+      </div>
+      <div>
+        <label>API Key</label>
+        <input id="apiKey" type="text" placeholder="•••" />
+      </div>
     </div>
 
-    <div class="grid two">
+    <div class="row">
       <div>
-        <label class="section-title">Conference</label>
-        <select id="selConf"></select>
-        <div class="toolbar" style="margin-top:.5rem">
-          <input id="newConfName" type="text" placeholder="New conference name" />
-          <button class="btn" id="addConf">Add</button>
+        <label>Conference</label>
+        <select id="conferenceSelect"></select>
+        <div class="stack" style="margin-top:6px">
+          <button class="btn alt" id="btnRefreshConfs">Refresh</button>
+          <button class="btn" id="btnConfsForVendor">Load Conf’s Vendors</button>
         </div>
       </div>
       <div>
-        <label class="section-title">Vendor</label>
-        <select id="selVendor"></select>
-        <div class="toolbar" style="margin-top:.5rem">
-          <input id="newVendorName" type="text" placeholder="New vendor name" />
-          <button class="btn" id="addVendor">Add</button>
+        <label>Vendor</label>
+        <select id="vendorSelect"></select>
+        <div class="stack" style="margin-top:6px">
+          <button class="btn alt" id="btnRefreshVendors">Refresh</button>
+          <button class="btn" id="btnVendorDetails">View</button>
         </div>
       </div>
     </div>
 
-    <div class="grid two" style="margin-top:.5rem">
-      <div>
-        <label class="section-title">Notes</label>
-        <textarea id="notes" placeholder="Type quick notes…"></textarea>
-      </div>
-      <div>
-        <label class="section-title">Photos</label>
-        <input id="photos" type="file" accept="image/*" capture="environment" multiple />
-        <div id="imgPreview" class="imgGrid" style="margin-top:.5rem"></div>
-      </div>
+    <div>
+      <label>Notes</label>
+      <textarea id="notes" placeholder="Quick notes…"></textarea>
     </div>
 
-    <div class="divider"></div>
-
-    <div class="grid">
-      <div class="toolbar">
-        <button class="btn ok" id="startRec">Start</button>
-        <button class="btn warn" id="stopRec" disabled>Stop</button>
-        <button class="btn primary" id="uploadBtn" disabled>Upload</button>
-        <span class="muted">Audio format: <span class="kbd" id="audFmt">—</span></span>
+    <div class="row">
+      <div class="card">
+        <label>Photos (multiple)</label>
+        <input id="photos" type="file" accept="image/*" multiple capture="environment" />
+        <div class="small">You can add more photos before uploading.</div>
       </div>
-      <audio id="player" controls class="hidden"></audio>
-    </div>
-  </div>
-
-  <!-- PREVIOUS SESSIONS -->
-  <div class="card">
-    <div class="row-spread">
-      <h3 style="margin:0">Previous Sessions</h3>
-      <button class="btn ghost" id="refreshSessions">Refresh</button>
-    </div>
-    <div id="prevList" class="grid" style="margin-top:.5rem"></div>
-  </div>
-
-  <!-- LOGS -->
-  <div class="card">
-    <div class="row-spread">
-      <h3 style="margin:0">Diagnostics & Logs</h3>
-      <div class="toolbar">
-        <button class="btn ghost" id="copyLogs">Copy</button>
-        <button class="btn ghost" id="dlTxt">.txt</button>
-        <button class="btn ghost" id="dlJson">.json</button>
-        <label class="chip"><input id="verbose" type="checkbox" /> verbose</label>
+      <div class="card">
+        <label>Audio (m4a, aac, wav, mp3, ogg)</label>
+        <input id="audio" type="file" accept="audio/*,.m4a,.aac,.wav,.mp3,.ogg" capture />
+        <div class="small">Use your phone’s recorder, then attach here for best compatibility.</div>
       </div>
     </div>
-    <div class="log-wrap" id="logs"></div>
-  </div>
 
-  <div class="bottom-pad"></div>
-</div>
+    <div class="stack">
+      <button class="btn primary" id="btnStart">Start Session</button>
+      <button class="btn" id="btnStop" disabled>Stop Session</button>
+      <button class="btn alt" id="btnUpload" disabled>Upload Files</button>
+      <button class="btn" id="btnCheck" disabled>Check Progress</button>
+    </div>
 
-<script>
-/* ========= Tiny Logger ========= */
-const L = (() => {
-  const buf = [];
-  const el = () => document.getElementById('logs');
-  const line = (obj) => {
-    const o = typeof obj === 'string' ? {msg:obj} : obj;
-    const rec = {t:new Date().toISOString(), level:o.level||'info', msg:o.msg||'', extra:o.extra||''};
-    buf.push(rec);
-    const v = document.getElementById('verbose')?.checked;
-    const prettied = v ? JSON.stringify(rec, null, 2) : JSON.stringify(rec);
-    const div = document.createElement('div');
-    div.textContent = prettied;
-    el()?.appendChild(div);
-    el()?.scrollTo({top: el().scrollHeight, behavior:'smooth'});
-  };
-  return {
-    info:(msg,extra='')=>line({level:'info',msg,extra}),
-    warn:(msg,extra='')=>line({level:'warn',msg,extra}),
-    error:(msg,extra='')=>line({level:'error',msg,extra}),
-    get:()=>buf.slice(),
-    clear:()=>{ buf.length=0; if(el()) el().textContent=''; }
-  }
-})();
+    <div>
+      <div class="divider"></div>
+      <div class="small">Status</div>
+      <div id="status" class="pill">idle</div>
+    </div>
 
-/* ========= Config ========= */
-const cfg = {
-  apiBase: localStorage.getItem('cb.apiBase') || '',
-  apiKey: localStorage.getItem('cb.apiKey') || ''
-};
-function saveCfg(){
-  cfg.apiBase = document.getElementById('apiBase').value.trim();
-  cfg.apiKey = document.getElementById('apiKey').value.trim();
-  localStorage.setItem('cb.apiBase', cfg.apiBase);
-  localStorage.setItem('cb.apiKey', cfg.apiKey);
-  L.info('Config updated.');
-  initData();
-}
-function getHeaders(json=false){
-  const h = {'X-API-Key': cfg.apiKey};
-  if(json) h['Content-Type']='application/json';
-  return h;
-}
-function url(path){ return cfg.apiBase.replace(/\/+$/,'') + path; }
+    <div>
+      <div class="divider"></div>
+      <div class="small">Logs</div>
+      <pre id="logs"></pre>
+      <div class="stack">
+        <button class="btn" id="btnCopy">Copy</button>
+        <button class="btn danger" id="btnClearLog">Clear</button>
+      </div>
+    </div>
 
-/* ========= Networking with strict API contract ========= */
-async function http(method, path, {json=null, form=null, expectJSON=true}={}){
-  const opts = { method, headers: getHeaders(!!json) };
-  if(json) opts.body = JSON.stringify(json);
-  if(form){ opts.body = form; /* no content-type set */ }
+    <div>
+      <div class="divider"></div>
+      <div class="small">Previous Sessions</div>
+      <div class="stack">
+        <button class="btn" id="btnRefreshSessions">Refresh</button>
+      </div>
+      <div id="sessionsList" class="grid"></div>
+    </div>
 
-  const id = Math.random().toString(36).slice(2);
-  L.info(`HTTP ${method} ${url(path)}`, '→ request');
-  L.info(JSON.stringify({id, method, url:url(path), reqHeaders:opts.headers}), '');
+  </section>
 
-  const res = await fetch(url(path), opts);
-  const bodyText = await res.text();
-  let body = bodyText;
-  if(expectJSON){
-    try { body = bodyText ? JSON.parse(bodyText) : {}; } catch { /* keep text */ }
-  }
-  L.info(`HTTP ${method} ${url(path)}`, `← ${res.status} ${res.statusText||''} (${res.headers.get('x-response-time')||''})`);
-  L.info(JSON.stringify({id, dur:res.headers.get('x-response-time')||'', status:res.status, resHeaders:Object.fromEntries(res.headers.entries()), body: bodyText}), '');
-  if(!res.ok){
-    const err = new Error(`HTTP ${res.status} — ${typeof body==='string'? body : JSON.stringify(body)}`);
-    L.error(`HTTP ${method} ${url(path)}`, `${err.message}`);
-    throw err;
-  }
-  return body;
-}
-
-/* ========= Data loads ========= */
-async function initData(){
-  if(!cfg.apiBase){ L.error('Could not load initial data: API base URL not configured.'); return; }
-  if(!cfg.apiKey){ L.warn('API key missing; some endpoints will 401.'); }
-
-  // Conferences
-  const confs = await http('GET','/conferences');
-  const confList = (confs && confs.data) ? confs.data : [];
-  const selConf = document.getElementById('selConf');
-  selConf.innerHTML = '';
-  const optNone = document.createElement('option'); optNone.value=''; optNone.textContent='(None / Unknown)'; selConf.appendChild(optNone);
-  for(const c of confList){ const o=document.createElement('option'); o.value=c.id; o.textContent=c.name; selConf.appendChild(o); }
-
-  // Vendors: either global list, or confined by selected conference on change
-  const vends = await http('GET','/vendors');
-  const vendList = (vends && vends.data) ? vends.data : [];
-  const selVendor = document.getElementById('selVendor');
-  selVendor.innerHTML = '';
-  const optNoneV = document.createElement('option'); optNoneV.value=''; optNoneV.textContent='(None / Unknown)'; selVendor.appendChild(optNoneV);
-  for(const v of vendList){ const o=document.createElement('option'); o.value=v.id; o.textContent=v.name; selVendor.appendChild(o); }
-
-  L.info('Dropdowns populated from API.');
-  loadSessionsBrief();
-}
-
-document.addEventListener('change', async (e)=>{
-  if(e.target.id==='selConf' && e.target.value){
-    const confId = e.target.value;
-    const vendors = await http('GET', `/conferences/${confId}/vendors`);
-    const list = vendors?.data||[];
-    const selVendor = document.getElementById('selVendor');
-    selVendor.innerHTML='';
-    const optNoneV = document.createElement('option'); optNoneV.value=''; optNoneV.textContent='(None / Unknown)'; selVendor.appendChild(optNoneV);
-    for(const v of list){ const o=document.createElement('option'); o.value=v.id; o.textContent=v.name; selVendor.appendChild(o); }
-  }
-});
-
-/* ========= Create Unknowns if needed ========= */
-async function ensureUnknownConference(){
-  // Try find an existing “Unknown Conference”
-  const confs = await http('GET','/conferences');
-  const found = (confs?.data||[]).find(c=> (c.name||'').trim().toLowerCase()==='unknown conference');
-  if(found) return found.id;
-  // Create one (dates required)
-  const today = new Date().toISOString().slice(0,10);
-  const body = { name:'Unknown Conference', start_date:today, end_date:today };
-  const created = await http('POST','/conferences',{json:body});
-  return created?.data?.id || created?.id;
-}
-async function ensureUnknownVendor(conferenceId){
-  // try vendors by conference
-  try{
-    const v = await http('GET', `/conferences/${conferenceId}/vendors`);
-    const found = (v?.data||[]).find(x => (x.name||'').trim().toLowerCase()==='unknown vendor');
-    if(found) return found.id;
-  }catch{/* ignore */}
-  // global search fallback
-  const vg = await http('GET','/vendors');
-  const gf = (vg?.data||[]).find(x => (x.name||'').trim().toLowerCase()==='unknown vendor' && x.conference_id===conferenceId);
-  if(gf) return gf.id;
-
-  // create
-  const body = { name:'Unknown Vendor', conference_id:conferenceId };
-  const created = await http('POST','/vendors',{json:body});
-  return created?.data?.id || created?.id;
-}
-
-/* ========= Audio recorder (prefer OGG, fallback to file picker) ========= */
-let mediaRecorder=null, chunks=[], audioBlob=null, audioMime=null;
-const audFmtEl = ()=>document.getElementById('audFmt');
-function resetAudioState(){
-  chunks=[]; audioBlob=null; audioMime=null;
-  document.getElementById('player').classList.add('hidden');
-  document.getElementById('uploadBtn').disabled=true;
-}
-async function startRecording(){
-  resetAudioState();
-  // Try ogg first
-  let preferred = 'audio/ogg;codecs=opus';
-  if(!MediaRecorder.isTypeSupported(preferred)){
-    // try plain ogg
-    preferred = 'audio/ogg';
-  }
-  if(!MediaRecorder.isTypeSupported(preferred)){
-    // show fallback notice and open a file picker
-    audFmtEl().textContent = 'fallback: file';
-    L.warn('Browser does not support recording OGG. Please attach audio via file picker below.');
-    await pickAudioFile();
-    return;
-  }
-  const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-  mediaRecorder = new MediaRecorder(stream, { mimeType: preferred });
-  audioMime = preferred.includes('ogg') ? 'audio/ogg' : preferred;
-  audFmtEl().textContent = audioMime;
-
-  mediaRecorder.ondataavailable = e => { if(e.data && e.data.size>0) chunks.push(e.data); };
-  mediaRecorder.onstop = () => {
-    if(chunks.length){
-      audioBlob = new Blob(chunks, {type: audioMime});
-      const url = URL.createObjectURL(audioBlob);
-      const player = document.getElementById('player');
-      player.src = url; player.classList.remove('hidden');
-      document.getElementById('uploadBtn').disabled=false;
-      const kb = (audioBlob.size/1024/1024).toFixed(2);
-      L.info(`Audio captured: ${kb} MB`);
+  <script>
+    // -------- Small utility logger ----------
+    const $ = (id) => document.getElementById(id);
+    const logsEl = $("logs");
+    function log(level, msg, obj) {
+      const t = new Date().toISOString();
+      const line = { t, level, msg, extra: obj ?? "" };
+      const color = level === "error" ? "err" : level === "warn" ? "warn" : "ok";
+      logsEl.textContent += JSON.stringify(line) + "\n";
+      logsEl.scrollTop = logsEl.scrollHeight;
+      console[level === "error" ? "error" : level === "warn" ? "warn" : "log"](line);
+      $("status").textContent = msg;
+      $("status").className = "pill " + (color);
     }
-  };
-  mediaRecorder.start();
-  document.getElementById('recState').textContent='recording';
-  document.getElementById('startRec').disabled=true;
-  document.getElementById('stopRec').disabled=false;
-  L.info('Audio recording started.');
-}
-function stopRecording(){
-  if(mediaRecorder && mediaRecorder.state!=='inactive'){
-    L.info('Stopping recorder…');
-    mediaRecorder.stop();
-    mediaRecorder.stream.getTracks().forEach(t=>t.stop());
-  }
-  mediaRecorder=null;
-  document.getElementById('recState').textContent='stopped';
-  document.getElementById('startRec').disabled=false;
-  document.getElementById('stopRec').disabled=true;
-}
-async function pickAudioFile(){
-  return new Promise((resolve)=>{
-    const inp = document.createElement('input');
-    inp.type='file';
-    // Accept only formats allowed by server
-    inp.accept='audio/ogg,audio/mpeg,audio/wav,audio/aac,audio/x-m4a,audio/mp4';
-    inp.onchange = ()=>{
-      const file = inp.files?.[0];
-      if(file){
-        audioBlob = file;
-        audioMime = file.type || 'audio/ogg';
-        audFmtEl().textContent = `file: ${audioMime}`;
-        const url = URL.createObjectURL(file);
-        const player = document.getElementById('player');
-        player.src = url; player.classList.remove('hidden');
-        document.getElementById('uploadBtn').disabled=false;
-        L.info(`Audio file selected: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`);
-      }
-      resolve();
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    // -------- Config (persist in localStorage) ----------
+    const cfg = {
+      get base(){ return localStorage.getItem("cb_api_base") || ""; },
+      set base(v){ localStorage.setItem("cb_api_base", v || ""); },
+      get key(){ return localStorage.getItem("cb_api_key") || ""; },
+      set key(v){ localStorage.setItem("cb_api_key", v || ""); },
     };
-    inp.click();
-  });
-}
+    $("apiBase").value = cfg.base || "https://conference-buddy-geoutils.replit.app/api";
+    $("apiKey").value = cfg.key || "";
+    function updateConfig(){
+      cfg.base = $("apiBase").value.trim().replace(/\/+$/,"");
+      cfg.key = $("apiKey").value.trim();
+      log("info","Config updated.");
+    }
+    $("apiBase").addEventListener("change", updateConfig);
+    $("apiKey").addEventListener("change", updateConfig);
 
-/* ========= Images preview ========= */
-const photoInput = document.getElementById('photos');
-photoInput.addEventListener('change', ()=>{
-  const wrap = document.getElementById('imgPreview');
-  wrap.innerHTML='';
-  const files = Array.from(photoInput.files||[]);
-  for(const f of files){
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(f);
-    wrap.appendChild(img);
-  }
-});
+    // -------- API core ----------
+    async function apiFetch(path, { method="GET", headers={}, json, formData, expect="json" } = {}){
+      const url = (cfg.base || "").replace(/\/+$/,"") + path;
+      const h = { "X-API-Key": cfg.key, ...headers };
+      let body = undefined;
 
-/* ========= Sessions list (brief) ========= */
-async function loadSessionsBrief(){
-  const prev = document.getElementById('prevList');
-  prev.innerHTML = '';
-  // We’ll show by vendor quick view (pick first 12 most recent vendors and flatten their sessions)
-  // If backend has /sessions list, you can switch to that; some deployments don’t expose it.
-  try{
-    const vends = await http('GET', '/vendors');
-    const cards = [];
-    for(const v of (vends?.data||[]).slice(0,8)){
-      // fetch vendor detail to get sessions
-      let detail = null;
-      try{ detail = await http('GET', `/vendors/${v.id}`); }catch{ continue; }
-      const sessions = detail?.data?.sessions||[];
-      sessions.slice(0,2).forEach(s=>{
-        const div = document.createElement('div');
-        div.className='card';
-        div.innerHTML = `
-          <div class="row-spread">
-            <strong>${v.name}</strong>
-            <span class="chip">${s.processing_status||s.status||'—'}</span>
-          </div>
-          <div class="muted" style="margin-top:.25rem;font-size:13px">Start: ${s.start_time||'—'}</div>
-          <div class="muted" style="font-size:13px">Id: <span class="kbd">${s.id}</span></div>
-          <div class="toolbar" style="margin-top:.5rem">
-            <button class="btn ghost" data-view="${s.id}">View</button>
-          </div>
-        `;
-        prev.appendChild(div);
+      // NEVER set Content-Type for FormData; browser will set the multipart boundary.
+      if (json !== undefined) {
+        h["Content-Type"] = "application/json";
+        body = JSON.stringify(json);
+      } else if (formData instanceof FormData) {
+        body = formData;
+      }
+
+      log("info", `HTTP ${method} ${url}`, "→ request");
+      log("info", JSON.stringify({ id: Math.random().toString(36).slice(2), method, url, reqHeaders: h }), "");
+
+      const res = await fetch(url, { method, headers: h, body });
+      let payload;
+      try { payload = await res.json(); }
+      catch { payload = await res.text(); }
+
+      log("info", `HTTP ${method} ${url}`, `← ${res.status} ${res.statusText || ""}`);
+      log("info", JSON.stringify({
+        status: res.status, resHeaders: Object.fromEntries(res.headers.entries()),
+        body: typeof payload === "string" ? payload : JSON.stringify(payload)
+      }), "");
+
+      if (!res.ok) {
+        const err = new Error(payload && payload.error ? payload.error : `${res.status}`);
+        err.response = payload;
+        throw err;
+      }
+      return payload;
+    }
+
+    // -------- UI state ----------
+    let currentSession = null; // {id, start}
+    let lastCreatedAt = null;
+
+    // -------- Populate dropdowns ----------
+    async function loadConferences(){
+      const data = await apiFetch("/conferences");
+      const sel = $("conferenceSelect");
+      sel.innerHTML = "";
+      for (const c of (data.data || [])) {
+        const o = document.createElement("option");
+        o.value = c.id; o.textContent = c.name || "(Unnamed)";
+        sel.appendChild(o);
+      }
+      log("info","Conferences loaded.");
+    }
+    async function loadVendors(){
+      const data = await apiFetch("/vendors");
+      const sel = $("vendorSelect");
+      sel.innerHTML = "";
+      for (const v of (data.data || [])) {
+        const o = document.createElement("option");
+        o.value = v.id; o.textContent = v.name || "(Unnamed)";
+        sel.appendChild(o);
+      }
+      log("info","Vendors loaded.");
+    }
+    async function loadVendorsForSelectedConference() {
+      const confId = $("conferenceSelect").value;
+      if (!confId) return;
+      const data = await apiFetch(`/conferences/${confId}/vendors`);
+      const sel = $("vendorSelect");
+      sel.innerHTML = "";
+      for (const v of (data.data || [])) {
+        const o = document.createElement("option");
+        o.value = v.id; o.textContent = v.name || "(Unnamed)";
+        sel.appendChild(o);
+      }
+      log("info","Vendors for conference loaded.");
+    }
+    async function vendorDetails(){
+      const id = $("vendorSelect").value;
+      if (!id) return;
+      await apiFetch(`/vendors/${id}`);
+    }
+
+    // -------- Sessions list ----------
+    async function listSessions(){
+      const vendorId = $("vendorSelect").value;
+      if (!vendorId) { $("sessionsList").innerHTML = "<div class='small'>Select a vendor.</div>"; return; }
+      const vendor = await apiFetch(`/vendors/${vendorId}`);
+      const sessions = (vendor.data && vendor.data.sessions) || [];
+      const wrap = document.createElement("div");
+      for (const s of sessions) {
+        const el = document.createElement("div");
+        el.className = "card";
+        el.innerHTML = `
+          <div><b>${(vendor.data && vendor.data.name) || "Vendor"}</b> — <span class="small">${s.processing_status || "n/a"}</span></div>
+          <div class="small">Start: ${s.start_time || "?"}</div>
+          <div class="small">Id: ${s.id}</div>
+          <div class="stack" style="margin-top:8px">
+            <button class="btn" data-view="${s.id}">View</button>
+            <button class="btn alt" data-check="${s.id}">Check</button>
+          </div>`;
+        wrap.appendChild(el);
+      }
+      $("sessionsList").innerHTML = "";
+      $("sessionsList").appendChild(wrap);
+      $("sessionsList").querySelectorAll("[data-view]").forEach(b=>{
+        b.onclick = ()=> apiFetch(`/sessions/${b.dataset.view}`).catch(e=>log("error","View failed",e.message));
+      });
+      $("sessionsList").querySelectorAll("[data-check]").forEach(b=>{
+        b.onclick = ()=> checkProgress(b.dataset.check);
       });
     }
-    prev.addEventListener('click', async (e)=>{
-      const id = e.target?.dataset?.view;
-      if(!id) return;
+
+    // -------- Two-step flow ----------
+    // 1) Create
+    async function startSession(){
+      updateConfig();
+      const conference_id = $("conferenceSelect").value;
+      const vendor_id = $("vendorSelect").value;
+      if (!cfg.base || !cfg.key) return log("error","API base/key required.");
+      if (!conference_id || !vendor_id) return log("warn","Pick a conference and vendor first.");
+      const start_time = new Date().toISOString();
+
+      const body = { vendor_id, conference_id, start_time };
+      // Prefer the documented mobile create endpoint for two-step flows
+      const created = await apiFetch("/mobile/sessions/create", { method:"POST", json: body });
+      const sid = created.session_id || created.id || (created.data && created.data.id);
+      if (!sid) throw new Error("Create did not return session_id");
+      currentSession = { id: sid, start: start_time };
+      lastCreatedAt = Date.now();
+
+      $("btnStart").disabled = true;
+      $("btnStop").disabled = false;
+      $("btnUpload").disabled = false;
+      $("btnCheck").disabled = false;
+
+      log("info", `Session created: ${sid}`);
+    }
+
+    // 2) Stop (sets end time only client-side; server gets it during upload)
+    function stopSession(){
+      if (!currentSession) return log("warn","No active session.");
+      $("btnStop").disabled = true;
+      log("info","Session stopped. Ready to upload files.");
+    }
+
+    // 3) Upload files to existing session
+    async function uploadFiles(){
+      if (!currentSession) return log("warn","Start a session first.");
+      const sid = currentSession.id;
+      const end_time = new Date().toISOString();
+
+      const fd = new FormData();
+      // Add images — use the "image_files" array name required by /add-files
+      const photos = $("photos").files;
+      for (let i=0;i<photos.length;i++) fd.append("image_files", photos[i], photos[i].name);
+
+      // Add audio — use "audio_files" array name
+      const audio = $("audio").files[0];
+      if (audio) {
+        // Server accepts: mp3, wav, m4a, aac, ogg
+        const okTypes = ["audio/mpeg","audio/wav","audio/x-wav","audio/aac","audio/x-aac","audio/mp4","audio/x-m4a","audio/ogg"];
+        if (!okTypes.includes(audio.type)) {
+          log("warn", `Audio type ${audio.type || "(unknown)"} may be rejected. Proceeding anyway…`);
+        }
+        fd.append("audio_files", audio, audio.name);
+      }
+
+      // Notes – /add-files expects `notes`; we also include `user_notes` for safety
+      const userNotes = $("notes").value || "";
+      if (userNotes) {
+        fd.append("notes", userNotes);
+        fd.append("user_notes", userNotes);
+      }
+      // Timing
+      fd.append("end_time", end_time);
+
+      // IMPORTANT: Do not manually set Content-Type for FormData
+      const res = await apiFetch(`/sessions/${encodeURIComponent(sid)}/add-files`, {
+        method: "POST",
+        formData: fd
+      });
+
+      log("info", `Files uploaded to ${sid}.`);
+
+      // Fire enrichment if available
+      try {
+        await triggerEnrichment(sid);
+      } catch(e) {
+        log("warn", "Enrichment trigger not available on this server.");
+      }
+
+      // Clear notes & inputs after upload completes
+      $("notes").value = "";
+      $("photos").value = "";
+      $("audio").value = "";
+      log("info","Inputs cleared (notes, photos, audio).");
+
+      // Refresh vendor sessions & poll progress briefly
+      await listSessions();
+      await pollProgress(sid, 5);
+    }
+
+    async function triggerEnrichment(sessionId){
+      // Try the documented/typical route first
+      try {
+        await apiFetch(`/sessions/${encodeURIComponent(sessionId)}/trigger-enrichment`, {
+          method:"POST", json: {}
+        });
+        log("info","Enrichment triggered.");
+        return;
+      } catch (e) {
+        // Some backends may expose a mobile namespaced endpoint
+        log("warn","Primary enrichment route failed, trying mobile variant…");
+      }
+      await apiFetch(`/mobile/sessions/${encodeURIComponent(sessionId)}/trigger-enrichment`, {
+        method:"POST", json: {}
+      });
+      log("info","Enrichment triggered (mobile route).");
+    }
+
+    // 4) Progress check/poll
+    async function checkProgress(sessionId){
+      const sid = sessionId || (currentSession && currentSession.id);
+      if (!sid) return log("warn","No session id.");
+      await apiFetch(`/sessions/${encodeURIComponent(sid)}`);
+    }
+    async function pollProgress(sessionId, attempts=5){
+      for (let i=0;i<attempts;i++){
+        await sleep(1200);
+        try {
+          const s = await apiFetch(`/sessions/${encodeURIComponent(sessionId)}`);
+          const p = s && (s.data || s);
+          const stage = (p.processing_status || p.status || "n/a");
+          log("info", `Progress: ${stage}`);
+          if (stage === "transcribed" || stage === "completed" || stage === "enriched") break;
+        } catch(e) {
+          log("warn","Progress check error.");
+          break;
+        }
+      }
+    }
+
+    // -------- Buttons ----------
+    $("btnStart").onclick = () => startSession().catch(e=>log("error","Create failed", e.response?.error || e.message));
+    $("btnStop").onclick = () => stopSession();
+    $("btnUpload").onclick = () => uploadFiles().catch(e=>{
+      const details = typeof e.response === "string" ? e.response : (e.response?.details || "");
+      log("error","Upload failed", (e.response?.error || e.message) + (details ? ` — ${details}` : ""));
+    });
+    $("btnCheck").onclick = () => checkProgress().catch(e=>log("error","Check failed", e.response?.error || e.message));
+
+    $("btnRefreshConfs").onclick = () => loadConferences().catch(e=>log("error","Load conferences failed", e.message));
+    $("btnRefreshVendors").onclick = () => loadVendors().catch(e=>log("error","Load vendors failed", e.message));
+    $("btnConfsForVendor").onclick = () => loadVendorsForSelectedConference().catch(e=>log("error","Load conf vendors failed", e.message));
+    $("btnVendorDetails").onclick = () => vendorDetails().catch(e=>log("error","Vendor details failed", e.message));
+
+    $("btnRefreshSessions").onclick = () => listSessions().catch(e=>log("error","List sessions failed", e.message));
+
+    $("btnCopy").onclick = async () => {
+      try { await navigator.clipboard.writeText(logsEl.textContent); log("info","Logs copied."); }
+      catch { log("error","Copy failed."); }
+    };
+    $("btnClearLog").onclick = () => { logsEl.textContent = ""; log("info","Logs cleared."); };
+
+    // -------- Initial load ----------
+    (async function init(){
       try{
-        const s = await http('GET', `/sessions/${id}`);
-        alert(`Session ${id}\nStatus: ${s?.data?.processing_status||s?.data?.status}\nFiles: ${JSON.stringify(s?.data?.files_uploaded||[], null, 2)}`);
-      }catch(err){ /* already logged */ }
-    }, {once:true});
-  }catch(err){
-    L.warn('Could not list previous sessions.');
-  }
-}
-
-/* ========= Upload (primary + fallback add-files + enrichment) ========= */
-async function uploadSession(){
-  const startIso = new Date().toISOString();
-
-  // Determine conference/vendor (allow unknowns)
-  let confId = document.getElementById('selConf').value;
-  if(!confId) confId = await ensureUnknownConference();
-
-  let vendId = document.getElementById('selVendor').value;
-  if(!vendId) vendId = await ensureUnknownVendor(confId);
-
-  const notes = document.getElementById('notes').value || '';
-
-  // Build multipart EXACTLY as per KB
-  const fd = new FormData();
-  fd.append('vendor_id', vendId);
-  fd.append('conference_id', confId);
-  fd.append('start_time', startIso);
-  if(notes) fd.append('user_notes', notes);
-
-  // audio — only append if we have a supported type/blob
-  if(audioBlob){
-    // Normalize an .ogg filename so S3 keys are sane
-    const fname = (audioBlob.name && /\.[a-z0-9]+$/i.test(audioBlob.name))
-      ? audioBlob.name
-      : `session_${startIso.replace(/[:.]/g,'-')}.ogg`;
-    fd.append('audio_file', audioBlob, fname);
-  }
-
-  // images
-  const files = Array.from(photoInput.files||[]);
-  for(const f of files){
-    fd.append('photos', f, f.name || `photo_${Math.random().toString(36).slice(2)}.jpg`);
-  }
-
-  // Try primary endpoint
-  let created = null, createdId = null, needFallbackFilesPersist = false;
-  try{
-    created = await http('POST', '/sessions/upload', {form:fd});
-    createdId = created?.data?.id || created?.id || null;
-
-    // Heuristic: if server returned 201 but the payload shows no files recorded while we *did* send them,
-    // we’ll run add-files to be safe on some edge backends.
-    const weSentMedia = (!!audioBlob) || files.length>0 || !!notes;
-    const serverFiles = created?.data?.files_uploaded || [];
-    if(weSentMedia && serverFiles.length===0){
-      needFallbackFilesPersist = true;
-      L.warn('Server created session but returned 0 files; will add-files as fallback.');
-    }
-  }catch(err){
-    // If server 400/415 about media, tell the user
-    throw err;
-  }
-
-  // Fallback file persistence (two-step)
-  if(needFallbackFilesPersist && createdId){
-    const fd2 = new FormData();
-    if(audioBlob){
-      const fname = (audioBlob.name && /\.[a-z0-9]+$/i.test(audioBlob.name))
-        ? audioBlob.name
-        : `session_${startIso.replace(/[:.]/g,'-')}.ogg`;
-      fd2.append('audio_files', audioBlob, fname);
-    }
-    for(const f of files){
-      fd2.append('image_files', f, f.name || `photo_${Math.random().toString(36).slice(2)}.jpg`);
-    }
-    if(notes) fd2.append('notes', notes); // add-files uses 'notes' (per KB mobile add/batch examples)
-
-    try{
-      await http('POST', `/sessions/${createdId}/add-files`, {form:fd2});
-    }catch(err){
-      L.warn('add-files fallback failed (media may still be attached by primary upload).');
-    }
-  }
-
-  // Trigger enrichment
-  if(createdId){
-    try{
-      await http('POST', `/sessions/${createdId}/trigger-enrichment`, {json:{}});
-      L.info(`Enrichment triggered for session ${createdId}.`);
-    }catch(err){
-      L.warn('Enrichment trigger failed; the backend may auto-queue enrichment.');
-    }
-  }
-
-  // Cleanup UI
-  document.getElementById('notes').value = '';
-  photoInput.value = '';
-  document.getElementById('imgPreview').innerHTML='';
-  resetAudioState();
-
-  alert(`Upload complete${createdId ? ` (session ${createdId})` : ''}.`);
-  loadSessionsBrief();
-}
-
-/* ========= Add Conference/Vendor ========= */
-async function addConference(){
-  const name = document.getElementById('newConfName').value.trim();
-  if(!name){ alert('Enter conference name'); return; }
-  const today = new Date().toISOString().slice(0,10);
-  const body = { name, start_date: today, end_date: today };
-  try{
-    const created = await http('POST','/conferences',{json:body});
-    document.getElementById('newConfName').value='';
-    await initData();
-    const id = created?.data?.id || created?.id;
-    if(id) document.getElementById('selConf').value = id;
-  }catch{/* logged */}
-}
-async function addVendor(){
-  const name = document.getElementById('newVendorName').value.trim();
-  let confId = document.getElementById('selConf').value;
-  if(!name){ alert('Enter vendor name'); return; }
-  if(!confId) confId = await ensureUnknownConference();
-  const body = { name, conference_id: confId };
-  try{
-    const created = await http('POST','/vendors',{json:body});
-    document.getElementById('newVendorName').value='';
-    await initData();
-    const id = created?.data?.id || created?.id;
-    if(id) document.getElementById('selVendor').value = id;
-  }catch{/* logged */}
-}
-
-/* ========= Self-Test ========= */
-async function selfTest(){
-  try{
-    await http('GET','/health');
-    await http('GET','/conferences');
-    L.info('Self-Test OK.');
-    alert('Self-Test OK');
-  }catch{
-    alert('Self-Test failed — see Logs.');
-  }
-}
-
-/* ========= UI wiring ========= */
-document.getElementById('apiBase').value = cfg.apiBase;
-document.getElementById('apiKey').value = cfg.apiKey;
-
-document.getElementById('saveCfg').addEventListener('click', saveCfg);
-document.getElementById('btnApi').addEventListener('click', ()=>window.open(cfg.apiBase.replace(/\/api\/?$/,'/admin/knowledge-base'), '_blank'));
-document.getElementById('btnLogs').addEventListener('click', ()=>document.getElementById('logs').scrollIntoView({behavior:'smooth'}));
-document.getElementById('btnSelfTest').addEventListener('click', selfTest);
-
-document.getElementById('addConf').addEventListener('click', addConference);
-document.getElementById('addVendor').addEventListener('click', addVendor);
-
-document.getElementById('startRec').addEventListener('click', startRecording);
-document.getElementById('stopRec').addEventListener('click', stopRecording);
-document.getElementById('uploadBtn').addEventListener('click', async ()=>{
-  try{ await uploadSession(); }
-  catch(err){ L.error('Upload failed: ' + err.message + '\n'); alert('Upload failed — see Logs.'); }
-});
-
-document.getElementById('refreshSessions').addEventListener('click', loadSessionsBrief);
-
-/* Logs actions */
-document.getElementById('copyLogs').addEventListener('click', async ()=>{
-  const txt = document.getElementById('verbose').checked
-    ? L.get().map(o=>JSON.stringify(o,null,2)).join('\n')
-    : L.get().map(o=>JSON.stringify(o)).join('\n');
-  await navigator.clipboard.writeText(txt); alert('Copied logs.');
-});
-document.getElementById('dlTxt').addEventListener('click', ()=>{
-  const blob = new Blob([L.get().map(o=>JSON.stringify(o)).join('\n')], {type:'text/plain'});
-  const a = Object.assign(document.createElement('a'), {download:`cb-logs-${Date.now()}.txt`, href:URL.createObjectURL(blob)});
-  a.click();
-});
-document.getElementById('dlJson').addEventListener('click', ()=>{
-  const blob = new Blob([JSON.stringify(L.get(), null, 2)], {type:'application/json'});
-  const a = Object.assign(document.createElement('a'), {download:`cb-logs-${Date.now()}.json`, href:URL.createObjectURL(blob)});
-  a.click();
-});
-
-/* Auto-init on load if config present */
-window.addEventListener('load', ()=>{ if(cfg.apiBase) initData(); });
-
-</script>
+        updateConfig();
+        if (!cfg.base) log("error","API base URL not configured.");
+        await loadConferences();
+        await loadVendors();
+        log("info","Dropdowns populated from API.");
+      }catch(e){
+        log("error","Initial load failed", e.message);
+      }
+    })();
+  </script>
 </body>
 </html>
