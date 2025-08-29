@@ -5,35 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
   <title>Conference Buddy – Sessions</title>
   <!--
-    ✅ Functionality preserved from your working build
-    - Same element IDs & two‑step flow
-    - Same API + localStorage config + logging + endpoints
-    - Same buttons and handlers
-    🎨 Modern, mobile-first UI (inline, discrete recorder)
+    ✅ Keeps your working functionality and IDs
+    - IDs preserved: apiBase, apiKey, conferenceSelect, vendorSelect, notes, photos, audio
+      btnStart, btnStop, btnUpload, btnCheck, btnRefreshConfs, btnConfsForVendor,
+      btnRefreshVendors, btnVendorDetails, btnRefreshSessions, status, logs, btnCopy, btnClearLog,
+      sessionsList
+    - API key stored ONLY in localStorage and sent in X-API-Key header
+    - Inline recorder auto‑starts when session starts; stops when session stops
+    - If user selects an audio file, that takes priority over the recorded blob
   -->
   <style>
-    :root{
-      --bg:#0b0f14;--card:#121821;--muted:#8b98a5;--text:#e6edf3;--text-dim:#9fb0c3;
-      --primary:#3ea6ff;--accent:#7ef0d7;--warn:#ffcc66;--danger:#ff6b6b;--ok:#7CFC98;
-      --border:#1f2a3a;--pad:14px;--r:16px
-    }
+    :root{--bg:#0b0f14;--card:#121821;--muted:#8b98a5;--text:#e6edf3;--text-dim:#9fb0c3;--primary:#3ea6ff;--accent:#7ef0d7;--danger:#ff6b6b;--warn:#ffcc66;--ok:#6ee7a5;--border:#1f2a3a}
     *{box-sizing:border-box}
     body{margin:0;background:radial-gradient(1200px 1200px at 80% -10%, #182233 0%, var(--bg) 60%);color:var(--text);font:16px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;-webkit-font-smoothing:antialiased}
     header,section{max-width:900px;margin:0 auto;padding:16px}
     header{position:sticky;top:0;background:linear-gradient(180deg, rgba(11,15,20,.95), rgba(11,15,20,.6) 60%, transparent);backdrop-filter:blur(6px);z-index:5}
     h1{font-size:1.1rem;margin:0 0 6px;display:flex;align-items:center;gap:10px}
-    .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 16px var(--accent)}
-    .kpi{display:flex;gap:8px;flex-wrap:wrap}
-    .kpi span{background:#0c141d;border:1px solid var(--border);border-radius:999px;padding:6px 10px;font-size:.8rem;color:var(--text-dim)}
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 18px var(--accent)}
 
     .grid{display:grid;gap:12px}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
     @media (max-width:720px){.row,.row-3{grid-template-columns:1fr}}
 
-    .card{background:linear-gradient(180deg, rgba(26,36,49,.7), rgba(18,24,33,.9));border:1px solid var(--border);border-radius:var(--r);padding:var(--pad);box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .card{background:linear-gradient(180deg, rgba(26,36,49,.7), rgba(18,24,33,.9));border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
     label{display:block;font-size:.85rem;color:var(--text-dim);margin:6px 0}
-    select,textarea,input[type="text"],input[type="url"],input[type="datetime-local"]{width:100%;border:1px solid #223049;background:#0c111a;color:var(--text);border-radius:12px;padding:11px 12px;outline:none}
+    select,textarea,input[type="text"],input[type="url"],input[type="password"],input[type="datetime-local"]{width:100%;border:1px solid #223049;background:#0c111a;color:var(--text);border-radius:12px;padding:11px 12px;outline:none}
     textarea{min-height:96px;resize:vertical}
     input[type="file"]{width:100%}
 
@@ -49,7 +46,7 @@
     .ok{color:#6ee7a5}.warn{color:#facc15}.err{color:#fca5a5}
     .divider{height:1px;background:#223045;margin:10px 0}
 
-    /* Inline recorder */
+    /* Inline recorder visuals */
     .rec-wrap{display:grid;gap:8px}
     .rec-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#0f1622;border:1px solid var(--border);border-radius:14px;padding:8px 10px}
     .rec-led{width:10px;height:10px;border-radius:50%;background:#666}
@@ -60,16 +57,10 @@
 <body>
   <header>
     <h1><span class="dot"></span>Conference Buddy — Session Uploader</h1>
-    <div class="kpi">
-      <span>Two-step flow</span>
-      <span>Multi-image</span>
-      <span>Inline recorder</span>
-      <span>Enrichment trigger</span>
-    </div>
   </header>
 
   <section class="card grid">
-    <!-- Config (same IDs) -->
+    <!-- Config -->
     <div class="row">
       <div>
         <label>API Base URL</label>
@@ -77,11 +68,14 @@
       </div>
       <div>
         <label>API Key</label>
-        <input id="apiKey" type="text" placeholder="•••" autocomplete="off" />
+        <input id="apiKey" type="password" placeholder="•••" autocomplete="off" />
+        <div class="stack" style="margin-top:6px">
+          <button class="btn alt" id="btnSaveConfig">Save Config</button>
+        </div>
       </div>
     </div>
 
-    <!-- Conference / Vendor (same IDs) -->
+    <!-- Conference / Vendor -->
     <div class="row">
       <div>
         <label>Conference</label>
@@ -107,7 +101,7 @@
       <textarea id="notes" placeholder="Quick notes…"></textarea>
     </div>
 
-    <!-- Media pickers + inline recorder -->
+    <!-- Media pickers + inline recorder (auto) -->
     <div class="row">
       <div class="card">
         <label>Photos (multiple)</label>
@@ -116,9 +110,8 @@
       </div>
       <div class="card">
         <label>Audio</label>
-        <!-- keep original file input id for compatibility -->
         <input id="audio" type="file" accept="audio/*,.m4a,.aac,.wav,.mp3,.ogg" />
-        <div class="small">Use inline recorder or attach a file.</div>
+        <div class="small">Recording starts automatically with the session. You can attach a file instead.</div>
         <div class="rec-wrap" style="margin-top:8px">
           <div class="rec-bar">
             <div class="stack" style="align-items:center">
@@ -128,16 +121,14 @@
             <span class="pill">Timer: <span id="recTimer" class="timer">00:00</span></span>
           </div>
           <div class="stack">
-            <button id="btnRecStart" class="btn primary">Start</button>
-            <button id="btnRecStop" class="btn" disabled>Stop</button>
-            <button id="btnRecClear" class="btn">Clear</button>
+            <button id="btnRecClear" class="btn">Clear Recording</button>
           </div>
           <audio id="playback" controls style="width:100%"></audio>
         </div>
       </div>
     </div>
 
-    <!-- Actions (same IDs) -->
+    <!-- Actions -->
     <div class="stack">
       <button class="btn primary" id="btnStart">Start Session</button>
       <button class="btn" id="btnStop" disabled>Stop Session</button>
@@ -172,7 +163,7 @@
   </section>
 
   <script>
-    // ---------- Logger (unchanged semantics) ----------
+    // -------- Logger --------
     const $ = (id) => document.getElementById(id);
     const logsEl = $("logs");
     function log(level, msg, obj){
@@ -187,7 +178,7 @@
     }
     const sleep = (ms)=> new Promise(r=>setTimeout(r,ms));
 
-    // ---------- Config (localStorage) ----------
+    // -------- Config (localStorage) --------
     const cfg = {
       get base(){ return localStorage.getItem("cb_api_base") || ""; },
       set base(v){ localStorage.setItem("cb_api_base", v || ""); },
@@ -203,8 +194,9 @@
     }
     $("apiBase").addEventListener("change", updateConfig);
     $("apiKey").addEventListener("change", updateConfig);
+    $("btnSaveConfig").addEventListener("click", updateConfig);
 
-    // ---------- API core (header auth; never in URL) ----------
+    // -------- API core --------
     async function apiFetch(path, { method="GET", headers={}, json, formData }={}){
       const url = (cfg.base || '').replace(/\/+$/,'') + path;
       const h = { "X-API-Key": cfg.key, ...headers };
@@ -220,12 +212,12 @@
       return payload;
     }
 
-    // ---------- UI state ----------
+    // -------- UI state --------
     let currentSession = null; // { id, start }
     let recordedBlob = null;   // inline recorder blob
     let recordedMime = '';
 
-    // ---------- Dropdowns ----------
+    // -------- Dropdowns --------
     async function loadConferences(){
       const data = await apiFetch('/conferences');
       const sel = $("conferenceSelect"); sel.innerHTML='';
@@ -247,7 +239,7 @@
     }
     async function vendorDetails(){ const id=$("vendorSelect").value; if(!id) return; await apiFetch(`/vendors/${id}`); }
 
-    // ---------- Sessions list ----------
+    // -------- Sessions list --------
     async function listSessions(){
       const vendorId = $("vendorSelect").value;
       if (!vendorId){ $("sessionsList").innerHTML = "<div class='small'>Select a vendor.</div>"; return; }
@@ -270,7 +262,32 @@
       $("sessionsList").querySelectorAll('[data-check]').forEach(b=>{ b.onclick=()=> checkProgress(b.dataset.check); });
     }
 
-    // ---------- Two-step flow ----------
+    // -------- Inline recorder (auto start/stop with session) --------
+    const rec = { media:null, chunks:[], timer:null, s:0 };
+    const led = $("recLed"), tEl=$("recTimer"), fmtEl=$("audioFormat"), play=$("playback");
+    function tick(){ rec.s++; const m=String(Math.floor(rec.s/60)).padStart(2,'0'); const s=String(rec.s%60).padStart(2,'0'); tEl.textContent = `${m}:${s}`; }
+    function resetTimer(){ rec.s=0; tEl.textContent='00:00'; clearInterval(rec.timer); rec.timer=null; }
+    function clearRecordingUI(){ recordedBlob=null; recordedMime=''; fmtEl.textContent='—'; play.removeAttribute('src'); play.load(); resetTimer(); led.classList.remove('active'); }
+
+    async function startRec(){
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+        const prefer = ['audio/webm','audio/mp4','audio/ogg'];
+        const mime = prefer.find(m=> MediaRecorder.isTypeSupported(m)) || 'audio/webm';
+        const mr = new MediaRecorder(stream, { mimeType: mime });
+        rec.media = mr; rec.chunks = []; recordedBlob=null; recordedMime=mime; fmtEl.textContent = mime;
+        mr.ondataavailable = e=>{ if(e.data && e.data.size) rec.chunks.push(e.data); };
+        mr.onstop = ()=>{ if (rec.chunks.length){ recordedBlob = new Blob(rec.chunks, { type: recordedMime }); play.src = URL.createObjectURL(recordedBlob); play.load(); } stream.getTracks().forEach(t=>t.stop()); };
+        mr.start(); led.classList.add('active'); rec.timer=setInterval(tick,1000); rec.s=0; tEl.textContent='00:00';
+      }catch(err){ log('warn','Microphone unavailable, use file picker instead.'); }
+    }
+    function stopRec(){ if(rec.media && rec.media.state!=='inactive'){ rec.media.stop(); } led.classList.remove('active'); clearInterval(rec.timer); }
+
+    // If user manually picks a file, prefer that over recording
+    $("audio").addEventListener('change', ()=>{ if($("audio").files[0]){ recordedBlob=null; recordedMime=''; fmtEl.textContent = $("audio").files[0].type || 'n/a'; play.src = URL.createObjectURL($("audio").files[0]); play.load(); resetTimer(); led.classList.remove('active'); if(rec.media && rec.media.state!=='inactive'){ stopRec(); } } });
+    $("btnRecClear").addEventListener('click', ()=>{ clearRecordingUI(); $("audio").value=''; });
+
+    // -------- Two-step flow --------
     async function startSession(){
       updateConfig();
       const conference_id = $("conferenceSelect").value;
@@ -283,9 +300,11 @@
       if (!sid) throw new Error('Create did not return session_id');
       currentSession = { id:sid, start:start_time };
       $("btnStart").disabled = true; $("btnStop").disabled = false; $("btnUpload").disabled = false; $("btnCheck").disabled = false;
+      // Auto‑start inline recording
+      await startRec();
       log('info',`Session created: ${sid}`);
     }
-    function stopSession(){ if (!currentSession) return log('warn','No active session.'); $("btnStop").disabled = true; log('info','Session stopped. Ready to upload files.'); }
+    function stopSession(){ if (!currentSession) return log('warn','No active session.'); $("btnStop").disabled = true; stopRec(); log('info','Session stopped. Ready to upload files.'); }
 
     async function uploadFiles(){
       if (!currentSession) return log('warn','Start a session first.');
@@ -293,12 +312,10 @@
       const fd = new FormData();
       // images
       const photos = $("photos").files; for (let i=0;i<photos.length;i++) fd.append('image_files', photos[i], photos[i].name);
-      // audio from file input
+      // audio: prefer manual file; otherwise use recorded blob
       const audioFile = $("audio").files[0];
-      // or inline-recorded blob
-      if (recordedBlob){ fd.append('audio_files', new File([recordedBlob], `recording.${recordedMime.includes('webm')?'webm':'m4a'}`, { type: recordedMime||'audio/webm' })); }
-      else if (audioFile){ fd.append('audio_files', audioFile, audioFile.name); }
-      // notes + timing
+      if (audioFile){ fd.append('audio_files', audioFile, audioFile.name); }
+      else if (recordedBlob){ fd.append('audio_files', new File([recordedBlob], `recording.${recordedMime.includes('webm')?'webm': recordedMime.includes('ogg')?'ogg':'m4a'}`, { type: recordedMime||'audio/webm' })); }
       const userNotes = $("notes").value || '';
       if (userNotes){ fd.append('notes', userNotes); fd.append('user_notes', userNotes); }
       fd.append('end_time', end_time);
@@ -326,40 +343,7 @@
       for (let i=0;i<attempts;i++){ await sleep(1200); try{ const s = await apiFetch(`/sessions/${encodeURIComponent(sessionId)}`); const p = s && (s.data||s); const stage = (p.processing_status||p.status||'n/a'); log('info',`Progress: ${stage}`); if (['transcribed','completed','enriched'].includes(stage)) break; } catch(e){ log('warn','Progress check error.'); break; } }
     }
 
-    // ---------- Inline recorder (does not change your flow) ----------
-    const rec = { media:null, chunks:[], timer:null, s:0 };
-    const led = $("recLed"), tEl=$("recTimer"), fmtEl=$("audioFormat"), play=$("playback");
-    const btnStart = $("btnRecStart"), btnStop=$("btnRecStop"), btnClear=$("btnRecClear");
-
-    function tick(){ rec.s++; const m=String(Math.floor(rec.s/60)).padStart(2,'0'); const s=String(rec.s%60).padStart(2,'0'); tEl.textContent = `${m}:${s}`; }
-    function resetTimer(){ rec.s=0; tEl.textContent='00:00'; clearInterval(rec.timer); rec.timer=null; }
-    function clearRecordingUI(){ recordedBlob=null; recordedMime=''; fmtEl.textContent='—'; play.removeAttribute('src'); play.load(); resetTimer(); led.classList.remove('active'); btnStop.disabled=true; }
-
-    async function startRec(){
-      try{
-        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-        const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/ogg');
-        const mr = new MediaRecorder(stream, { mimeType: mime });
-        rec.media = mr; rec.chunks = []; recordedBlob=null; recordedMime=mime;
-        fmtEl.textContent = mime;
-        mr.ondataavailable = e=>{ if(e.data && e.data.size) rec.chunks.push(e.data); };
-        mr.onstop = ()=>{
-          if (rec.chunks.length){ recordedBlob = new Blob(rec.chunks, { type: recordedMime }); play.src = URL.createObjectURL(recordedBlob); play.load(); }
-          stream.getTracks().forEach(t=>t.stop());
-        };
-        mr.start(); led.classList.add('active'); btnStart.disabled=true; btnStop.disabled=false; rec.timer=setInterval(tick,1000); rec.s=0; tEl.textContent='00:00';
-      }catch(err){ log('warn','Microphone unavailable, use file picker instead.'); }
-    }
-    function stopRec(){ if(rec.media && rec.media.state!=='inactive'){ rec.media.stop(); } led.classList.remove('active'); btnStart.disabled=false; btnStop.disabled=true; clearInterval(rec.timer); }
-
-    btnStart.addEventListener('click', startRec);
-    btnStop.addEventListener('click', stopRec);
-    btnClear.addEventListener('click', ()=>{ clearRecordingUI(); $("audio").value=''; });
-
-    // If user manually picks a file, prefer that over recording
-    $("audio").addEventListener('change', ()=>{ if($("audio").files[0]){ recordedBlob=null; recordedMime=''; fmtEl.textContent = $("audio").files[0].type || 'n/a'; play.src = URL.createObjectURL($("audio").files[0]); play.load(); resetTimer(); led.classList.remove('active'); }});
-
-    // ---------- Buttons (same IDs) ----------
+    // -------- Buttons --------
     $("btnStart").onclick = ()=> startSession().catch(e=>log('error','Create failed', e.response?.error || e.message));
     $("btnStop").onclick = ()=> stopSession();
     $("btnUpload").onclick = ()=> uploadFiles().catch(e=>{ const details = typeof e.response === 'string' ? e.response : (e.response?.details || ''); log('error','Upload failed', (e.response?.error || e.message) + (details?` — ${details}`:'')); });
@@ -375,11 +359,11 @@
     $("btnCopy").onclick = async ()=>{ try{ await navigator.clipboard.writeText(logsEl.textContent); log('info','Logs copied.'); } catch{ log('error','Copy failed.'); } };
     $("btnClearLog").onclick = ()=>{ logsEl.textContent=''; log('info','Logs cleared.'); };
 
-    // ---------- Initial load ----------
+    // -------- Initial load --------
     (async function init(){
       try{
         updateConfig();
-        if (!cfg.base) log('error','API base URL not configured.');
+        if (!cfg.base) log('warn','API base URL not configured.');
         await loadConferences(); await loadVendors();
         log('info','Dropdowns populated from API.');
       }catch(e){ log('error','Initial load failed', e.message); }
