@@ -1,4 +1,5 @@
 <!doctype html>
+
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -21,45 +22,42 @@
     header,section{max-width:900px;margin:0 auto;padding:16px}
     header{position:sticky;top:0;background:linear-gradient(180deg, rgba(11,15,20,.95), rgba(11,15,20,.6) 60%, transparent);backdrop-filter:blur(6px);z-index:5}
     h1{font-size:1.1rem;margin:0 0 6px;display:flex;align-items:center;gap:10px}
-    .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 18px var(--accent)}
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 18px var(--accent)}.grid{display:grid;gap:12px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+@media (max-width:720px){.row,.row-3{grid-template-columns:1fr}}
 
-    .grid{display:grid;gap:12px}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-    @media (max-width:720px){.row,.row-3{grid-template-columns:1fr}}
+.card{background:linear-gradient(180deg, rgba(26,36,49,.7), rgba(18,24,33,.9));border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+label{display:block;font-size:.85rem;color:var(--text-dim);margin:6px 0}
+select,textarea,input[type="text"],input[type="url"],input[type="password"],input[type="datetime-local"]{width:100%;border:1px solid #223049;background:#0c111a;color:var(--text);border-radius:12px;padding:11px 12px;outline:none}
+textarea{min-height:96px;resize:vertical}
+input[type="file"]{width:100%}
 
-    .card{background:linear-gradient(180deg, rgba(26,36,49,.7), rgba(18,24,33,.9));border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    label{display:block;font-size:.85rem;color:var(--text-dim);margin:6px 0}
-    select,textarea,input[type="text"],input[type="url"],input[type="password"],input[type="datetime-local"]{width:100%;border:1px solid #223049;background:#0c111a;color:var(--text);border-radius:12px;padding:11px 12px;outline:none}
-    textarea{min-height:96px;resize:vertical}
-    input[type="file"]{width:100%}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#1b2430;color:var(--text);border:1px solid #2a3341;border-radius:12px;padding:10px 14px;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:linear-gradient(180deg,#298DFF,#1671d8);border-color:#1a66b6}
+.btn.alt{background:#2b90d9;border-color:#1d6fa8}
+.btn.danger{background:linear-gradient(180deg,#ff6b6b,#e65050);border-color:#c63f39}
+.stack{display:flex;flex-wrap:wrap;gap:8px}
+.pill{border:1px dashed #2b3646;border-radius:999px;padding:8px 12px;font-size:.85rem;color:var(--text-dim)}
+.small{font-size:.8rem;color:var(--text-dim)}
+pre{white-space:pre-wrap;word-break:break-word;background:#0c111a;border:1px solid #273143;border-radius:12px;padding:10px;max-height:280px;overflow:auto}
+.ok{color:#6ee7a5}.warn{color:#facc15}.err{color:#fca5a5}
+.divider{height:1px;background:#223045;margin:10px 0}
 
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#1b2430;color:var(--text);border:1px solid #2a3341;border-radius:12px;padding:10px 14px;cursor:pointer}
-    .btn:disabled{opacity:.45;cursor:not-allowed}
-    .btn.primary{background:linear-gradient(180deg,#298DFF,#1671d8);border-color:#1a66b6}
-    .btn.alt{background:#2b90d9;border-color:#1d6fa8}
-    .btn.danger{background:linear-gradient(180deg,#ff6b6b,#e65050);border-color:#c63f39}
-    .stack{display:flex;flex-wrap:wrap;gap:8px}
-    .pill{border:1px dashed #2b3646;border-radius:999px;padding:8px 12px;font-size:.85rem;color:var(--text-dim)}
-    .small{font-size:.8rem;color:var(--text-dim)}
-    pre{white-space:pre-wrap;word-break:break-word;background:#0c111a;border:1px solid #273143;border-radius:12px;padding:10px;max-height:280px;overflow:auto}
-    .ok{color:#6ee7a5}.warn{color:#facc15}.err{color:#fca5a5}
-    .divider{height:1px;background:#223045;margin:10px 0}
+/* Inline recorder visuals */
+.rec-wrap{display:grid;gap:8px}
+.rec-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#0f1622;border:1px solid var(--border);border-radius:14px;padding:8px 10px}
+.rec-led{width:10px;height:10px;border-radius:50%;background:#666}
+.rec-led.active{background:#ff4d4d;box-shadow:0 0 0 6px rgba(255,77,77,.15)}
+.timer{font-variant-numeric:tabular-nums;font-weight:700}
 
-    /* Inline recorder visuals */
-    .rec-wrap{display:grid;gap:8px}
-    .rec-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#0f1622;border:1px solid var(--border);border-radius:14px;padding:8px 10px}
-    .rec-led{width:10px;height:10px;border-radius:50%;background:#666}
-    .rec-led.active{background:#ff4d4d;box-shadow:0 0 0 6px rgba(255,77,77,.15)}
-    .timer{font-variant-numeric:tabular-nums;font-weight:700}
   </style>
 </head>
 <body>
   <header>
     <h1><span class="dot"></span>Conference Buddy — Session Uploader</h1>
-  </header>
-
-  <section class="card grid">
+  </header>  <section class="card grid">
     <!-- Config -->
     <div class="row">
       <div>
@@ -73,96 +71,93 @@
           <button class="btn alt" id="btnSaveConfig">Save Config</button>
         </div>
       </div>
+    </div><!-- Conference / Vendor -->
+<div class="row">
+  <div>
+    <label>Conference</label>
+    <select id="conferenceSelect"></select>
+    <div class="stack" style="margin-top:6px">
+      <button class="btn alt" id="btnRefreshConfs">Refresh</button>
+      <button class="btn" id="btnConfsForVendor">Load Conf’s Vendors</button>
     </div>
+  </div>
+  <div>
+    <label>Vendor</label>
+    <select id="vendorSelect"></select>
+    <div class="stack" style="margin-top:6px">
+      <button class="btn alt" id="btnRefreshVendors">Refresh</button>
+      <button class="btn" id="btnVendorDetails">View</button>
+    </div>
+  </div>
+</div>
 
-    <!-- Conference / Vendor -->
-    <div class="row">
-      <div>
-        <label>Conference</label>
-        <select id="conferenceSelect"></select>
-        <div class="stack" style="margin-top:6px">
-          <button class="btn alt" id="btnRefreshConfs">Refresh</button>
-          <button class="btn" id="btnConfsForVendor">Load Conf’s Vendors</button>
+<!-- Notes -->
+<div>
+  <label>Notes</label>
+  <textarea id="notes" placeholder="Quick notes…"></textarea>
+</div>
+
+<!-- Media pickers + inline recorder (auto) -->
+<div class="row">
+  <div class="card">
+    <label>Photos (multiple)</label>
+    <input id="photos" type="file" accept="image/*" multiple capture="environment" />
+    <div class="small">You can add more photos before uploading.</div>
+  </div>
+  <div class="card">
+    <label>Audio</label>
+    <input id="audio" type="file" accept="audio/*,.m4a,.aac,.wav,.mp3,.ogg" />
+    <div class="small">Recording starts automatically with the session. You can attach a file instead.</div>
+    <div class="rec-wrap" style="margin-top:8px">
+      <div class="rec-bar">
+        <div class="stack" style="align-items:center">
+          <span id="recLed" class="rec-led" aria-hidden="true"></span>
+          <span class="pill">Format: <span id="audioFormat">—</span></span>
         </div>
+        <span class="pill">Timer: <span id="recTimer" class="timer">00:00</span></span>
       </div>
-      <div>
-        <label>Vendor</label>
-        <select id="vendorSelect"></select>
-        <div class="stack" style="margin-top:6px">
-          <button class="btn alt" id="btnRefreshVendors">Refresh</button>
-          <button class="btn" id="btnVendorDetails">View</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Notes -->
-    <div>
-      <label>Notes</label>
-      <textarea id="notes" placeholder="Quick notes…"></textarea>
-    </div>
-
-    <!-- Media pickers + inline recorder (auto) -->
-    <div class="row">
-      <div class="card">
-        <label>Photos (multiple)</label>
-        <input id="photos" type="file" accept="image/*" multiple capture="environment" />
-        <div class="small">You can add more photos before uploading.</div>
-      </div>
-      <div class="card">
-        <label>Audio</label>
-        <input id="audio" type="file" accept="audio/*,.m4a,.aac,.wav,.mp3,.ogg" />
-        <div class="small">Recording starts automatically with the session. You can attach a file instead.</div>
-        <div class="rec-wrap" style="margin-top:8px">
-          <div class="rec-bar">
-            <div class="stack" style="align-items:center">
-              <span id="recLed" class="rec-led" aria-hidden="true"></span>
-              <span class="pill">Format: <span id="audioFormat">—</span></span>
-            </div>
-            <span class="pill">Timer: <span id="recTimer" class="timer">00:00</span></span>
-          </div>
-          <div class="stack">
-            <button id="btnRecClear" class="btn">Clear Recording</button>
-          </div>
-          <audio id="playback" controls style="width:100%"></audio>
-        </div>
-      </div>
-    </div>
-
-    <!-- Actions -->
-    <div class="stack">
-      <button class="btn primary" id="btnStart">Start Session</button>
-      <button class="btn" id="btnStop" disabled>Stop Session</button>
-      <button class="btn alt" id="btnUpload" disabled>Upload Files</button>
-      <button class="btn" id="btnCheck" disabled>Check Progress</button>
-    </div>
-
-    <div>
-      <div class="divider"></div>
-      <div class="small">Status</div>
-      <div id="status" class="pill">idle</div>
-    </div>
-
-    <div>
-      <div class="divider"></div>
-      <div class="small">Logs</div>
-      <pre id="logs"></pre>
       <div class="stack">
-        <button class="btn" id="btnCopy">Copy</button>
-        <button class="btn danger" id="btnClearLog">Clear</button>
+        <button id="btnRecClear" class="btn">Clear Recording</button>
       </div>
+      <audio id="playback" controls style="width:100%"></audio>
     </div>
+  </div>
+</div>
 
-    <div>
-      <div class="divider"></div>
-      <div class="small">Previous Sessions</div>
-      <div class="stack">
-        <button class="btn" id="btnRefreshSessions">Refresh</button>
-      </div>
-      <div id="sessionsList" class="grid"></div>
-    </div>
-  </section>
+<!-- Actions -->
+<div class="stack">
+  <button class="btn primary" id="btnStart">Start Session</button>
+  <button class="btn" id="btnStop" disabled>Stop Session</button>
+  <button class="btn alt" id="btnUpload" disabled>Upload Files</button>
+  <button class="btn" id="btnCheck" disabled>Check Progress</button>
+</div>
 
-  <script>
+<div>
+  <div class="divider"></div>
+  <div class="small">Status</div>
+  <div id="status" class="pill">idle</div>
+</div>
+
+<div>
+  <div class="divider"></div>
+  <div class="small">Logs</div>
+  <pre id="logs"></pre>
+  <div class="stack">
+    <button class="btn" id="btnCopy">Copy</button>
+    <button class="btn danger" id="btnClearLog">Clear</button>
+  </div>
+</div>
+
+<div>
+  <div class="divider"></div>
+  <div class="small">Previous Sessions</div>
+  <div class="stack">
+    <button class="btn" id="btnRefreshSessions">Refresh</button>
+  </div>
+  <div id="sessionsList" class="grid"></div>
+</div>
+
+  </section>  <script>
     // -------- Logger --------
     const $ = (id) => document.getElementById(id);
     const logsEl = $("logs");
@@ -368,6 +363,5 @@
         log('info','Dropdowns populated from API.');
       }catch(e){ log('error','Initial load failed', e.message); }
     })();
-  </script>
-</body>
+  </script></body>
 </html>
